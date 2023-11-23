@@ -1,0 +1,47 @@
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+
+import research_router from "./routes/research.js";
+import check_router from "./routes/check.js";
+import community_router from "./routes/community.js";
+import login_router from "./routes/login.js";
+import semester_router from "./routes/semester.js";
+import user_router from "./routes/user.js";
+
+dotenv.config(); //env 파일 가져오기
+const { PORT, ENV } = process.env;
+
+const app = express();
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+// app.use(
+//   cors({
+//     origin: "*", // 모든 출처 허용
+//     credentials: true,
+//   })
+// );
+
+app.use("/research", research_router);
+app.use("/check", check_router);
+app.use("/community", community_router);
+app.use("/login", login_router);
+app.use("/semester", semester_router);
+app.use("/user", user_router);
+
+app.listen(PORT, () => {
+  console.log(`listening on ${PORT}`);
+});
