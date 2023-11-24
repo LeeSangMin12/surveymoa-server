@@ -24,7 +24,6 @@ MongoClient.connect(
 
 /**
  * 유저 초기 정보 세팅
- * :로그인시 주는 기본캘린더도 여기서 설정
  */
 router.post("/initial_setting", async (req, res) => {
   try {

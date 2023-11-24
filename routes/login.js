@@ -139,7 +139,12 @@ const get_user_id = async (platform, user_info_url, access_token) => {
  * : 등록된 회원 : db에서 정보 가져옴
  * : 신규 회원 : db에 신규 회원 정보 추가
  */
-const get_user_info = async (token_info, platform_id, is_exist_user) => {
+const get_user_info = async (
+  token_info,
+  auth_platform,
+  platform_id,
+  is_exist_user
+) => {
   if (is_exist_user) {
     //이미 등록한 회원일때
     return is_exist_user;
@@ -149,6 +154,7 @@ const get_user_info = async (token_info, platform_id, is_exist_user) => {
       platform_access_token: token_info.access_token,
       platform_refresh_token: token_info.refresh_token,
       platform_token_expires: token_info.expires_in,
+      auth_platform: auth_platform,
       platform_id: platform_id,
     });
 
@@ -180,7 +186,12 @@ const process_login = async (platform, req, res) => {
   }
 
   const is_exist_user = await db.collection("login").findOne({ platform_id });
-  const user_info = await get_user_info(token_info, platform_id, is_exist_user);
+  const user_info = await get_user_info(
+    token_info,
+    auth_platform,
+    platform_id,
+    is_exist_user
+  );
   const { access_token, refresh_token } = make_jwt(user_info._id, platform_id);
 
   //refresh token만 db에 저장 - access token은 client가 관리

@@ -69,7 +69,8 @@ router.post(
       const {
         category,
         title,
-        people_num,
+        participant_num,
+        recruitment_num,
         min_age,
         max_age,
         gender,
@@ -92,7 +93,8 @@ router.post(
         user_id: verify_access_token.user_id,
         category,
         title,
-        people_num,
+        participant_num,
+        recruitment_num,
         min_age,
         max_age,
         gender,
@@ -148,30 +150,28 @@ router.post("/get_research", async (req, res) => {
   }
 });
 
-router.post("/get_assignment_list", async (req, res) => {
+/**
+ * 설문조사 리스트 가져오기
+ */
+router.post("/get_research_arr", async (req, res) => {
   try {
-    const { semester_id } = req.body.data;
+    const { category } = req.body.data;
 
-    const assignment_list = await db
-      .collection("assignment")
-      .find({
-        semester_id: semester_id,
-      })
-      .toArray();
-
-    const sort_assignment_list = sort_assignment(assignment_list).map(
-      (val) => ({
-        assignment_id: val._id,
-        completion_status: val.completion_status,
-        registration_date: val.registration_date,
-        assignment_name: val.assignment_name,
-        assignment_d_day: val.assignment_d_day,
-      })
-    );
+    let research_arr;
+    if (category === "전체") {
+      research_arr = await db.collection("research").find().toArray();
+    } else {
+      research_arr = await db
+        .collection("research")
+        .find({
+          category: category,
+        })
+        .toArray();
+    }
 
     res.json({
       status: "ok",
-      data: sort_assignment_list,
+      data: research_arr,
     });
   } catch (error) {
     console.error("error:", error);
@@ -338,6 +338,113 @@ router.post("/add_assignment_list", async (req, res) => {
         file_list: [],
       });
     }
+
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 찜한 조사 리스트 가져오기
+ */
+router.post("/get_like_research_arr", async (req, res) => {
+  try {
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const user_info = await db
+      .collection("login")
+      .findOne({ _id: ObjectId(verify_access_token.user_id) });
+
+    const like_research_obj = user_info.like_research_obj || {};
+
+    res.json({
+      status: "ok",
+      data: {
+        like_research_obj,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 조사 찜 기능
+ */
+router.post("/like_research", async (req, res) => {
+  try {
+    const { research_id } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    await db.collection("login").updateOne(
+      { _id: ObjectId(verify_access_token.user_id) },
+      {
+        $push: { like_research_obj: research_id },
+        $inc: { like_research_count: 1 },
+      }
+    );
+
+    //훗날 좋아요 기반으로 알고리즘으로 순위시스템 넣을수도 있기에 추가(빨리 sql 써야지)
+    await db.collection("research").updateOne(
+      { _id: ObjectId(research_id) },
+      {
+        $push: { like_user_obj: verify_access_token.user_id },
+        $inc: { like_user_count: 1 },
+      }
+    );
+
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 조사 찜 취소
+ */
+router.post("/unlike_research", async (req, res) => {
+  try {
+    const { research_id } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    await db.collection("login").updateOne(
+      { _id: ObjectId(verify_access_token.user_id) },
+      {
+        $pull: { like_research_obj: research_id },
+        $inc: { like_research_count: -1 },
+      }
+    );
+
+    //훗날 좋아요 기반으로 알고리즘으로 순위시스템 넣을수도 있기에 추가(빨리 sql 써야지)
+    await db.collection("research").updateOne(
+      { _id: ObjectId(research_id) },
+      {
+        $pull: { like_user_obj: verify_access_token.user_id },
+        $inc: { like_user_count: -1 },
+      }
+    );
 
     res.json({
       status: "ok",
