@@ -63,14 +63,15 @@ const calculate_d_day_assignment = (assignment) => {
  */
 router.post(
   "/regi_research",
-  s3_file_upload("research/img").array("img_obj"),
+  s3_file_upload("research/img").array("img_arr"),
   async (req, res) => {
     try {
       const {
         category,
         title,
         people_num,
-        age_obj,
+        min_age,
+        max_age,
         gender,
         deadline,
         form_link,
@@ -92,12 +93,13 @@ router.post(
         category,
         title,
         people_num,
-        age_obj,
+        min_age,
+        max_age,
         gender,
         deadline,
         form_link,
         desc,
-        img_obj: uploaded_file,
+        img_arr: uploaded_file,
       });
 
       res.json({
@@ -113,7 +115,10 @@ router.post(
   }
 );
 
-router.post("/get_assignment", async (req, res) => {
+/**
+ * 설문조사 가져오기
+ */
+router.post("/get_research", async (req, res) => {
   try {
     const { assignment_id } = req.body.data;
 
