@@ -68,18 +68,20 @@ router.post("/get_info", async (req, res) => {
       _id: ObjectId(verify_access_token.user_id),
     });
 
+    console.log("get_user_info", get_user_info);
+
     const user_info = {
-      platform_id: get_user_info.platform_id,
-      admission_year: get_user_info.admission_year,
-      department: get_user_info.department,
+      gender: get_user_info.gender,
+      means_of_contact: get_user_info.means_of_contact,
       nickname: get_user_info.nickname,
-      university: get_user_info.university,
-      img_url: get_user_info.img_url,
+      year_of_birth: get_user_info.year_of_birth,
     };
 
     res.json({
       status: "ok",
-      data: user_info,
+      data: {
+        user_info: user_info,
+      },
     });
   } catch (error) {
     console.error("error:", error);

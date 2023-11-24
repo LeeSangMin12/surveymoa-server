@@ -69,7 +69,8 @@ router.post(
       const {
         category,
         title,
-        participant_num,
+        participant_count,
+        participant_obj,
         recruitment_num,
         min_age,
         max_age,
@@ -93,7 +94,8 @@ router.post(
         user_id: verify_access_token.user_id,
         category,
         title,
-        participant_num,
+        participant_count,
+        participant_obj: JSON.parse(participant_obj),
         recruitment_num,
         min_age,
         max_age,
@@ -122,24 +124,33 @@ router.post(
  */
 router.post("/get_research", async (req, res) => {
   try {
-    const { assignment_id } = req.body.data;
+    const { research_id } = req.body.data;
 
-    const assignment = await db.collection("assignment").findOne({
-      _id: ObjectId(assignment_id),
+    console.log("research_id", research_id);
+
+    const research = await db.collection("research").findOne({
+      _id: ObjectId(research_id),
     });
 
-    const assigmnet_info = {
-      completion_status: assignment.completion_status,
-      registration_date: assignment.registration_date,
-      assignment_name: assignment.assignment_name,
-      professor_name: assignment.professor_name,
-      assignment_description: assignment.assignment_description,
-      file_list: assignment.file_list,
+    const research_obj = {
+      user_id: research.user_id,
+      category: research.category,
+      title: research.title,
+      participant_count: research.participant_count,
+      participant_obj: research.participant_obj,
+      recruitment_num: research.recruitment_num,
+      min_age: research.min_age,
+      max_age: research.max_age,
+      gender: research.gender,
+      deadline: research.deadline,
+      form_link: research.form_link,
+      desc: research.desc,
+      img_arr: research.img_arr,
     };
 
     res.json({
       status: "ok",
-      data: assigmnet_info,
+      data: research_obj,
     });
   } catch (error) {
     console.error("error:", error);
