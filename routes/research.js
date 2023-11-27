@@ -69,8 +69,8 @@ router.post(
       const {
         category,
         title,
-        participant_count,
-        participant_obj,
+        participated_user_count,
+        participated_user_arr,
         recruitment_num,
         min_age,
         max_age,
@@ -94,9 +94,9 @@ router.post(
         user_id: verify_access_token.user_id,
         category,
         title,
-        participant_count,
-        participant_obj: JSON.parse(participant_obj),
-        recruitment_num,
+        participated_user_count: Number(participated_user_count),
+        participated_user_arr: JSON.parse(participated_user_arr),
+        recruitment_num: Number(recruitment_num),
         min_age,
         max_age,
         gender,
@@ -131,8 +131,8 @@ router.post(
         research_id,
         category,
         title,
-        participant_count,
-        participant_obj,
+        participated_user_count,
+        participated_user_arr,
         recruitment_num,
         min_age,
         max_age,
@@ -161,9 +161,9 @@ router.post(
             user_id: verify_access_token.user_id,
             category,
             title,
-            participant_count,
-            participant_obj: JSON.parse(participant_obj),
-            recruitment_num,
+            participated_user_count: Number(participated_user_count),
+            participated_user_arr: JSON.parse(participated_user_arr),
+            recruitment_num: Number(recruitment_num),
             min_age,
             max_age,
             gender,
@@ -203,8 +203,8 @@ router.post("/get_research", async (req, res) => {
       user_id: research.user_id,
       category: research.category,
       title: research.title,
-      participant_count: research.participant_count,
-      participant_obj: research.participant_obj,
+      participated_user_count: research.participated_user_count,
+      participated_user_arr: research.participated_user_arr,
       recruitment_num: research.recruitment_num,
       min_age: research.min_age,
       max_age: research.max_age,
@@ -250,6 +250,53 @@ router.post("/get_research_arr", async (req, res) => {
     res.json({
       status: "ok",
       data: research_arr,
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 설문조사 참여
+ */
+router.post("/participate_research", async (req, res) => {
+  try {
+    const { research_id } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const user_info = await db
+      .collection("login")
+      .findOne({ _id: ObjectId(verify_access_token.user_id) });
+
+    await db.collection("login").updateOne(
+      { _id: ObjectId(verify_access_token.user_id) },
+      {
+        $push: { participated_research_arr: research_id },
+        $inc: { participated_research_count: 1 },
+      }
+    );
+
+    await db.collection("research").updateOne(
+      { _id: ObjectId(research_id) },
+      {
+        $push: {
+          participated_user_arr: {
+            user_id: verify_access_token.user_id,
+            user_img: user_info.user_img,
+          },
+        },
+        $inc: { participated_user_count: 1 },
+      }
+    );
+
+    res.json({
+      status: "ok",
     });
   } catch (error) {
     console.error("error:", error);
@@ -450,35 +497,6 @@ router.post("/add_assignment_list", async (req, res) => {
 });
 
 /**
- * 찜한 조사 리스트 가져오기
- */
-router.post("/get_like_research_arr", async (req, res) => {
-  try {
-    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    const verify_access_token = verify_jwt(token);
-
-    const user_info = await db
-      .collection("login")
-      .findOne({ _id: ObjectId(verify_access_token.user_id) });
-
-    const like_research_obj = user_info.like_research_obj || {};
-
-    res.json({
-      status: "ok",
-      data: {
-        like_research_obj,
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-/**
  * 조사 찜 기능
  */
 router.post("/like_research", async (req, res) => {
@@ -507,6 +525,35 @@ router.post("/like_research", async (req, res) => {
 
     res.json({
       status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 찜한 조사 리스트 가져오기
+ */
+router.post("/get_like_research_arr", async (req, res) => {
+  try {
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const user_info = await db
+      .collection("login")
+      .findOne({ _id: ObjectId(verify_access_token.user_id) });
+
+    const like_research_obj = user_info.like_research_obj || {};
+
+    res.json({
+      status: "ok",
+      data: {
+        like_research_obj,
+      },
     });
   } catch (error) {
     console.error("error:", error);

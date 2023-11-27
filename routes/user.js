@@ -40,6 +40,15 @@ router.post("/initial_setting", async (req, res) => {
           gender,
           year_of_birth,
           means_of_contact,
+          hashtag_arr: [],
+          self_introduction: "",
+          user_img: "",
+          participate_research_arr: [],
+          participate_research_count: 0,
+          receive_star_count: 0,
+          receive_star_arr: [],
+          receive_like_count: 0,
+          receive_like_arr: [],
         },
       }
     );
