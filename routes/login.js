@@ -188,7 +188,7 @@ const process_login = async (platform, req, res) => {
   const is_exist_user = await db.collection("login").findOne({ platform_id });
   const user_info = await get_user_info(
     token_info,
-    auth_platform,
+    platform,
     platform_id,
     is_exist_user
   );

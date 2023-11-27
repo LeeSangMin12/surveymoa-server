@@ -120,13 +120,80 @@ router.post(
 );
 
 /**
+ * 설문 조사 수정
+ */
+router.post(
+  "/edit_research",
+  s3_file_upload("research/img").array("img_arr"),
+  async (req, res) => {
+    try {
+      const {
+        research_id,
+        category,
+        title,
+        participant_count,
+        participant_obj,
+        recruitment_num,
+        min_age,
+        max_age,
+        gender,
+        deadline,
+        form_link,
+        desc,
+      } = req.body;
+      const file_url = req.files;
+
+      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+      const verify_access_token = verify_jwt(token);
+
+      const uploaded_file = file_url.map((val) => ({
+        name: Buffer.from(val.originalname, "latin1").toString("utf8"),
+        size: val.size,
+        uri: val.location,
+      }));
+
+      await db.collection("research").updateOne(
+        {
+          _id: ObjectId(research_id),
+        },
+        {
+          $set: {
+            user_id: verify_access_token.user_id,
+            category,
+            title,
+            participant_count,
+            participant_obj: JSON.parse(participant_obj),
+            recruitment_num,
+            min_age,
+            max_age,
+            gender,
+            deadline,
+            form_link,
+            desc,
+            img_arr: uploaded_file,
+          },
+        }
+      );
+
+      res.json({
+        status: "ok",
+      });
+    } catch (error) {
+      console.error("error:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Internal server error",
+      });
+    }
+  }
+);
+
+/**
  * 설문조사 가져오기
  */
 router.post("/get_research", async (req, res) => {
   try {
     const { research_id } = req.body.data;
-
-    console.log("research_id", research_id);
 
     const research = await db.collection("research").findOne({
       _id: ObjectId(research_id),
@@ -183,6 +250,26 @@ router.post("/get_research_arr", async (req, res) => {
     res.json({
       status: "ok",
       data: research_arr,
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 설문조사 삭제
+ */
+router.post("/delete_research", async (req, res) => {
+  const { research_id } = req.body.data;
+  try {
+    await db.collection("research").deleteOne({ _id: ObjectId(research_id) });
+
+    res.json({
+      status: "ok",
     });
   } catch (error) {
     console.error("error:", error);
