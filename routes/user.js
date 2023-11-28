@@ -50,6 +50,10 @@ router.post("/initial_setting", async (req, res) => {
           rating_research: 0,
           like_research_count: 0,
           like_research_arr: [],
+          like_user_count: 0,
+          like_user_arr: [],
+          liked_user_count: 0,
+          liked_user_arr: [],
         },
       }
     );
@@ -67,6 +71,58 @@ router.post("/initial_setting", async (req, res) => {
 });
 
 /**
+ * 유저 초기 정보 수정
+ */
+router.post(
+  "/edit_setting",
+  s3_file_upload("user/profile_img").single("user_img"),
+  async (req, res) => {
+    try {
+      const { user_img, nickname, gender, year_of_birth, means_of_contact } =
+        req.body;
+
+      let img_url;
+      if (req.file === undefined) {
+        if (user_img !== "") {
+          img_url = user_img;
+        } else {
+          img_url = "";
+        }
+      } else {
+        img_url = req.file.location;
+      }
+
+      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+      const verify_access_token = verify_jwt(token);
+
+      await db.collection("login").updateOne(
+        { _id: ObjectId(verify_access_token.user_id) },
+        {
+          $set: {
+            user_img: img_url,
+            nickname,
+            gender,
+            year_of_birth,
+            means_of_contact,
+            img_url,
+          },
+        }
+      );
+
+      res.json({
+        status: "ok",
+      });
+    } catch (error) {
+      console.error("error:", error);
+      res.status(500).json({
+        status: "error",
+        message: "유저 데이터를 저장하지 못했습니다.",
+      });
+    }
+  }
+);
+
+/**
  * 유저 정보를 가져오기
  */
 router.post("/get_info", async (req, res) => {
@@ -79,11 +135,16 @@ router.post("/get_info", async (req, res) => {
     });
 
     const user_info = {
+      user_img: get_user_info.user_img,
       gender: get_user_info.gender,
       means_of_contact: get_user_info.means_of_contact,
+      hashtag_arr: get_user_info.hashtag_arr,
+      self_introduction: get_user_info.self_introduction,
       nickname: get_user_info.nickname,
       year_of_birth: get_user_info.year_of_birth,
+      rating_research: get_user_info.rating_research,
       rating_research_arr: get_user_info.rating_research_arr,
+      liked_user_count: get_user_info.liked_user_count,
     };
 
     res.json({
@@ -156,45 +217,70 @@ router.post("/get_user_info_arr", async (req, res) => {
 });
 
 /**
- * 유저 정보 수정
+ * 해시태그 등록
  */
-router.post(
-  "/edit_info",
-  s3_file_upload("user/profile_img").single("img_url"),
-  async (req, res) => {
-    try {
-      const { nickname, is_empty_img } = req.body;
-      const img_url = req.file === undefined ? "" : { uri: req.file.location };
+router.post("/regi_hashtag_arr", async (req, res) => {
+  try {
+    const { hashtag_arr } = req.body.data;
 
-      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-      const verify_access_token = verify_jwt(token);
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
 
-      const update_data = { nickname };
-
-      if (img_url !== "" || is_empty_img === "true") {
-        //유저가 이미지를 바꾸고 수정해야만, db에 유저이미지를 수정. +빈값일때도 저장
-        update_data.img_url = img_url;
+    await db.collection("login").updateOne(
+      {
+        _id: ObjectId(verify_access_token.user_id),
+      },
+      {
+        $set: {
+          hashtag_arr,
+        },
       }
+    );
 
-      await db
-        .collection("login")
-        .updateOne(
-          { _id: ObjectId(verify_access_token.user_id) },
-          { $set: update_data }
-        );
-
-      res.json({
-        status: "ok",
-      });
-    } catch (error) {
-      console.error("error:", error);
-      res.status(500).json({
-        status: "error",
-        message: "유저 데이터를 저장하지 못했습니다.",
-      });
-    }
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
   }
-);
+});
+
+/**
+ * 자기소개 등록
+ */
+router.post("/regi_self_introduction", async (req, res) => {
+  try {
+    const { self_introduction } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    await db.collection("login").updateOne(
+      {
+        _id: ObjectId(verify_access_token.user_id),
+      },
+      {
+        $set: {
+          self_introduction,
+        },
+      }
+    );
+
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
 
 /**
  * 유저 삭제
