@@ -22,42 +22,6 @@ MongoClient.connect(
   }
 );
 
-const sort_assignment = (assignment_list) => {
-  const sorted_list = assignment_list
-    .map((assignment) => {
-      const assignment_d_day = calculate_d_day_assignment(assignment);
-      return {
-        ...assignment,
-        assignment_d_day: assignment_d_day,
-      };
-    })
-    .sort((a, b) => {
-      if (a.completion_status === "true") return 1;
-      if (b.completion_status === "true") return -1;
-
-      //a와 b 모두 완료 상태가 아닌 경우 d-day 기준으로 정렬. d-day가 작은 것이 앞으로
-      return a.assignment_d_day - b.assignment_d_day;
-    });
-
-  return sorted_list;
-};
-
-const calculate_d_day_assignment = (assignment) => {
-  const today = new Date(); //시간차이 구하는 거라 둘 다 서버시간 일 테니, 한국시간 적용 안해줬음.
-  const comparison_date = new Date(assignment.registration_date);
-
-  today.setHours(0, 0, 0, 0); //시간 차이 제거
-  comparison_date.setHours(0, 0, 0, 0); ////시간 차이 제거
-
-  // 두 날짜의 차이(밀리초 단위)를 구함
-  let difference_millie_seconds = comparison_date - today;
-
-  // 밀리초 단위의 차이를 일(day) 단위로 변환
-  let difference_in_days = difference_millie_seconds / (1000 * 60 * 60 * 24);
-
-  return difference_in_days;
-};
-
 /**
  * 설문 조사 등록
  */
@@ -69,8 +33,6 @@ router.post(
       const {
         category,
         title,
-        participated_user_count,
-        participated_user_arr,
         recruitment_num,
         min_age,
         max_age,
@@ -94,8 +56,6 @@ router.post(
         user_id: verify_access_token.user_id,
         category,
         title,
-        participated_user_count: Number(participated_user_count),
-        participated_user_arr: JSON.parse(participated_user_arr),
         recruitment_num: Number(recruitment_num),
         min_age,
         max_age,
@@ -104,6 +64,13 @@ router.post(
         form_link,
         desc,
         img_arr: uploaded_file,
+        participate_user_arr: [],
+        participate_user_count: 0,
+        rating_user_arr: [],
+        rating_user_count: 0,
+        rating_user: 0,
+        like_user_arr: [],
+        like_user_count: 0,
       });
 
       res.json({
@@ -131,8 +98,6 @@ router.post(
         research_id,
         category,
         title,
-        participated_user_count,
-        participated_user_arr,
         recruitment_num,
         min_age,
         max_age,
@@ -161,8 +126,6 @@ router.post(
             user_id: verify_access_token.user_id,
             category,
             title,
-            participated_user_count: Number(participated_user_count),
-            participated_user_arr: JSON.parse(participated_user_arr),
             recruitment_num: Number(recruitment_num),
             min_age,
             max_age,
@@ -203,8 +166,6 @@ router.post("/get_research", async (req, res) => {
       user_id: research.user_id,
       category: research.category,
       title: research.title,
-      participated_user_count: research.participated_user_count,
-      participated_user_arr: research.participated_user_arr,
       recruitment_num: research.recruitment_num,
       min_age: research.min_age,
       max_age: research.max_age,
@@ -213,6 +174,8 @@ router.post("/get_research", async (req, res) => {
       form_link: research.form_link,
       desc: research.desc,
       img_arr: research.img_arr,
+      participate_user_arr: research.participate_user_arr,
+      participate_user_count: research.participate_user_count,
     };
 
     res.json({
@@ -277,8 +240,8 @@ router.post("/participate_research", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(verify_access_token.user_id) },
       {
-        $push: { participated_research_arr: research_id },
-        $inc: { participated_research_count: 1 },
+        $push: { participate_research_arr: research_id },
+        $inc: { participate_research_count: 1 },
       }
     );
 
@@ -286,12 +249,12 @@ router.post("/participate_research", async (req, res) => {
       { _id: ObjectId(research_id) },
       {
         $push: {
-          participated_user_arr: {
+          participate_user_arr: {
             user_id: verify_access_token.user_id,
             user_img: user_info.user_img,
           },
         },
-        $inc: { participated_user_count: 1 },
+        $inc: { participate_user_count: 1 },
       }
     );
 
@@ -314,102 +277,6 @@ router.post("/delete_research", async (req, res) => {
   const { research_id } = req.body.data;
   try {
     await db.collection("research").deleteOne({ _id: ObjectId(research_id) });
-
-    res.json({
-      status: "ok",
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-router.post(
-  "/edit_assignment",
-  s3_file_upload("assignment/add").array("file_list"),
-  async (req, res) => {
-    try {
-      const {
-        assignment_id,
-        semester_id,
-        completion_status,
-        registration_date,
-        assignment_name,
-        professor_name,
-        assignment_description,
-      } = req.body;
-      const file_url = req.files;
-
-      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-      const verify_access_token = verify_jwt(token);
-
-      const uploaded_file = file_url.map((val) => ({
-        name: Buffer.from(val.originalname, "latin1").toString("utf8"),
-        size: val.size,
-        uri: val.location,
-      }));
-
-      await db.collection("assignment").updateOne(
-        { _id: ObjectId(assignment_id) },
-        {
-          $set: {
-            user_id: verify_access_token.user_id,
-            semester_id,
-            completion_status,
-            registration_date: registration_date,
-            assignment_name,
-            professor_name,
-            assignment_description,
-            file_list: uploaded_file,
-          },
-        }
-      );
-
-      res.json({
-        status: "ok",
-      });
-    } catch (error) {
-      console.error("error:", error);
-      res.status(500).json({
-        status: "error",
-        message: "Internal server error",
-      });
-    }
-  }
-);
-
-router.post("/set_completion_status", async (req, res) => {
-  try {
-    const { assignment_id, completion_status } = req.body.data;
-
-    await db
-      .collection("assignment")
-      .updateOne(
-        { _id: ObjectId(assignment_id) },
-        { $set: { completion_status } }
-      );
-
-    res.json({
-      status: "ok",
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-router.post("/delete_assignment", async (req, res) => {
-  const { assignment_id } = req.body.data;
-  try {
-    await db
-      .collection("assignment")
-      .deleteOne({ _id: ObjectId(assignment_id) });
 
     res.json({
       status: "ok",
@@ -509,7 +376,7 @@ router.post("/like_research", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(verify_access_token.user_id) },
       {
-        $push: { like_research_obj: research_id },
+        $push: { like_research_arr: research_id },
         $inc: { like_research_count: 1 },
       }
     );
@@ -518,7 +385,7 @@ router.post("/like_research", async (req, res) => {
     await db.collection("research").updateOne(
       { _id: ObjectId(research_id) },
       {
-        $push: { like_user_obj: verify_access_token.user_id },
+        $push: { like_user_arr: verify_access_token.user_id },
         $inc: { like_user_count: 1 },
       }
     );
@@ -547,12 +414,12 @@ router.post("/get_like_research_arr", async (req, res) => {
       .collection("login")
       .findOne({ _id: ObjectId(verify_access_token.user_id) });
 
-    const like_research_obj = user_info.like_research_obj || {};
+    const like_research_arr = user_info.like_research_arr;
 
     res.json({
       status: "ok",
       data: {
-        like_research_obj,
+        like_research_arr,
       },
     });
   } catch (error) {
@@ -577,7 +444,7 @@ router.post("/unlike_research", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(verify_access_token.user_id) },
       {
-        $pull: { like_research_obj: research_id },
+        $pull: { like_research_arr: research_id },
         $inc: { like_research_count: -1 },
       }
     );
@@ -586,7 +453,7 @@ router.post("/unlike_research", async (req, res) => {
     await db.collection("research").updateOne(
       { _id: ObjectId(research_id) },
       {
-        $pull: { like_user_obj: verify_access_token.user_id },
+        $pull: { like_user_arr: verify_access_token.user_id },
         $inc: { like_user_count: -1 },
       }
     );

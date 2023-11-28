@@ -45,10 +45,11 @@ router.post("/initial_setting", async (req, res) => {
           user_img: "",
           participate_research_arr: [],
           participate_research_count: 0,
-          receive_star_count: 0,
-          receive_star_arr: [],
-          receive_like_count: 0,
-          receive_like_arr: [],
+          rating_research_count: 0,
+          rating_research_arr: [],
+          rating_research: 0,
+          like_research_count: 0,
+          like_research_arr: [],
         },
       }
     );
@@ -77,8 +78,6 @@ router.post("/get_info", async (req, res) => {
       _id: ObjectId(verify_access_token.user_id),
     });
 
-    console.log("get_user_info", get_user_info);
-
     const user_info = {
       gender: get_user_info.gender,
       means_of_contact: get_user_info.means_of_contact,
@@ -90,6 +89,60 @@ router.post("/get_info", async (req, res) => {
       status: "ok",
       data: {
         user_info: user_info,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
+ * 유저 정보 리스트를 가져오기
+ *
+ */
+router.post("/get_user_info_arr", async (req, res) => {
+  try {
+    const { participate_user_arr } = req.body.data;
+
+    const user_id_arr = participate_user_arr.map((user) =>
+      ObjectId(user.user_id)
+    );
+    const user_info_arr = await db
+      .collection("login")
+      .find(
+        {
+          _id: { $in: user_id_arr },
+        },
+        {
+          projection: {
+            _id: 1,
+            nickname: 1,
+            gender: 1,
+            year_of_birth: 1,
+            means_of_contact: 1,
+            hashtag_arr: 1,
+            self_introduction: 1,
+            user_img: 1,
+            participate_research_arr: 1,
+            participate_research_count: 1,
+            rating_research_count: 1,
+            rating_research_arr: 1,
+            rating_research: 1,
+            like_research_count: 1,
+            like_research_obj: 1,
+          },
+        }
+      )
+      .toArray();
+
+    res.json({
+      status: "ok",
+      data: {
+        user_info_arr: user_info_arr,
       },
     });
   } catch (error) {
