@@ -68,7 +68,6 @@ router.post(
         participate_user_count: 0,
         rating_user_arr: [],
         rating_user_count: 0,
-        rating_user: 0,
         like_user_arr: [],
         like_user_count: 0,
       });
@@ -350,6 +349,116 @@ router.post("/add_assignment_list", async (req, res) => {
         file_list: [],
       });
     }
+
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 평점 등록
+ */
+router.post("/regi_rating", async (req, res) => {
+  try {
+    const { research_id, evaluation_user_id, rating_val, rating_desc } =
+      req.body.data;
+
+    const user_info = await db.collection("login").findOne({
+      _id: ObjectId(evaluation_user_id),
+    });
+
+    const now_rating_research = user_info.rating_research;
+    const rating_research =
+      (now_rating_research * user_info.rating_research_count + rating_val) /
+      (user_info.rating_research_count + 1);
+
+    await db.collection("login").updateOne(
+      { _id: ObjectId(evaluation_user_id) },
+      {
+        $set: {
+          rating_research: rating_research.toFixed(1),
+        },
+        $push: {
+          rating_research_arr: {
+            research_id,
+            rating_val,
+            rating_desc,
+          },
+        },
+        $inc: { rating_research_count: 1 },
+      }
+    );
+
+    // await db.collection("research").updateOne(
+    //   { _id: ObjectId(research_id) },
+    //   {
+    //     $push: { rating_user_arr: evaluation_user_id },
+    //     $inc: { rating_user_count: 1 },
+    //   }
+    // );
+
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 평점 등록
+ */
+router.post("/edit_rating", async (req, res) => {
+  try {
+    const {
+      research_id,
+      evaluation_user_id,
+      rating_prev_val,
+      rating_val,
+      rating_desc,
+      rating_idx,
+    } = req.body.data;
+
+    const user_info = await db.collection("login").findOne({
+      _id: ObjectId(evaluation_user_id),
+    });
+
+    const now_rating_research = user_info.rating_research;
+    const rating_research =
+      (now_rating_research * user_info.rating_research_count -
+        rating_prev_val +
+        rating_val) /
+      user_info.rating_research_count;
+
+    await db.collection("login").updateOne(
+      { _id: ObjectId(evaluation_user_id) },
+      {
+        $set: {
+          rating_research: rating_research.toFixed(1),
+          [`rating_research_arr.${rating_idx}.rating_val`]: rating_val,
+          [`rating_research_arr.${rating_idx}.rating_desc`]: rating_desc,
+        },
+      }
+    );
+
+    // await db.collection("research").updateOne(
+    //   { _id: ObjectId(research_id) },
+    //   {
+    //     $push: { rating_user_arr: evaluation_user_id },
+    //     $inc: { rating_user_count: 1 },
+    //   }
+    // );
 
     res.json({
       status: "ok",

@@ -83,6 +83,7 @@ router.post("/get_info", async (req, res) => {
       means_of_contact: get_user_info.means_of_contact,
       nickname: get_user_info.nickname,
       year_of_birth: get_user_info.year_of_birth,
+      rating_research_arr: get_user_info.rating_research_arr,
     };
 
     res.json({
