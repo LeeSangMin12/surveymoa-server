@@ -191,9 +191,9 @@ router.post("/get_research", async (req, res) => {
 });
 
 /**
- * 설문조사 리스트 가져오기
+ * 설문조사 리스트 카테고리 별로 가져오기
  */
-router.post("/get_research_arr", async (req, res) => {
+router.post("/get_research_arr_category", async (req, res) => {
   try {
     const { category } = req.body.data;
 
@@ -212,6 +212,61 @@ router.post("/get_research_arr", async (req, res) => {
     res.json({
       status: "ok",
       data: research_arr,
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 설문조사 리스트 유저 아이디 별로 가져오기
+ */
+router.post("/get_research_arr_by_user_id", async (req, res) => {
+  try {
+    const { user_id } = req.body.data;
+
+    const research_arr = await db
+      .collection("research")
+      .find({
+        user_id,
+      })
+      .toArray();
+
+    res.json({
+      status: "ok",
+      data: research_arr,
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 설문조사 리스트 설문조사 아이디 별로 가져오기
+ */
+router.post("/get_research_arr_by_research_id", async (req, res) => {
+  try {
+    const { participate_research_arr } = req.body.data;
+
+    const now_research_arr = await Promise.all(
+      participate_research_arr.map(async (research_id) => {
+        return await db.collection("research").findOne({
+          _id: ObjectId(research_id),
+        });
+      })
+    );
+
+    res.json({
+      status: "ok",
+      data: now_research_arr,
     });
   } catch (error) {
     console.error("error:", error);
@@ -367,8 +422,14 @@ router.post("/add_assignment_list", async (req, res) => {
  */
 router.post("/regi_rating", async (req, res) => {
   try {
-    const { research_id, evaluation_user_id, rating_val, rating_desc } =
-      req.body.data;
+    const {
+      user_img,
+      nickname,
+      research_id,
+      evaluation_user_id,
+      rating_val,
+      rating_desc,
+    } = req.body.data;
 
     const user_info = await db.collection("login").findOne({
       _id: ObjectId(evaluation_user_id),
@@ -387,22 +448,17 @@ router.post("/regi_rating", async (req, res) => {
         },
         $push: {
           rating_research_arr: {
+            user_img,
+            nickname,
             research_id,
             rating_val,
             rating_desc,
+            date: new Date(),
           },
         },
         $inc: { rating_research_count: 1 },
       }
     );
-
-    // await db.collection("research").updateOne(
-    //   { _id: ObjectId(research_id) },
-    //   {
-    //     $push: { rating_user_arr: evaluation_user_id },
-    //     $inc: { rating_user_count: 1 },
-    //   }
-    // );
 
     res.json({
       status: "ok",
@@ -422,8 +478,9 @@ router.post("/regi_rating", async (req, res) => {
 router.post("/edit_rating", async (req, res) => {
   try {
     const {
-      research_id,
       evaluation_user_id,
+      user_img,
+      nickname,
       rating_prev_val,
       rating_val,
       rating_desc,
@@ -446,19 +503,14 @@ router.post("/edit_rating", async (req, res) => {
       {
         $set: {
           rating_research: rating_research.toFixed(1),
+          [`rating_research_arr.${rating_idx}.user_img`]: user_img,
+          [`rating_research_arr.${rating_idx}.nickname`]: nickname,
           [`rating_research_arr.${rating_idx}.rating_val`]: rating_val,
           [`rating_research_arr.${rating_idx}.rating_desc`]: rating_desc,
+          [`rating_research_arr.${rating_idx}.date`]: new Date(),
         },
       }
     );
-
-    // await db.collection("research").updateOne(
-    //   { _id: ObjectId(research_id) },
-    //   {
-    //     $push: { rating_user_arr: evaluation_user_id },
-    //     $inc: { rating_user_count: 1 },
-    //   }
-    // );
 
     res.json({
       status: "ok",

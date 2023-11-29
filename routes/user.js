@@ -145,6 +145,47 @@ router.post("/get_info", async (req, res) => {
       rating_research: get_user_info.rating_research,
       rating_research_arr: get_user_info.rating_research_arr,
       liked_user_count: get_user_info.liked_user_count,
+      participate_research_arr: get_user_info.participate_research_arr,
+    };
+
+    res.json({
+      status: "ok",
+      data: {
+        user_info: user_info,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
+ * 유저 정보를 아이디로 가져오기
+ */
+router.post("/get_info_by_user_id", async (req, res) => {
+  try {
+    const { user_id } = req.body.data;
+
+    const get_user_info = await db.collection("login").findOne({
+      _id: ObjectId(user_id),
+    });
+
+    const user_info = {
+      user_img: get_user_info.user_img,
+      gender: get_user_info.gender,
+      means_of_contact: get_user_info.means_of_contact,
+      hashtag_arr: get_user_info.hashtag_arr,
+      self_introduction: get_user_info.self_introduction,
+      nickname: get_user_info.nickname,
+      year_of_birth: get_user_info.year_of_birth,
+      rating_research: get_user_info.rating_research,
+      rating_research_arr: get_user_info.rating_research_arr,
+      liked_user_count: get_user_info.liked_user_count,
+      participate_research_arr: get_user_info.participate_research_arr,
     };
 
     res.json({
@@ -293,14 +334,6 @@ router.post("/withdrawl_account", async (req, res) => {
     await db
       .collection("login")
       .deleteOne({ _id: ObjectId(verify_access_token.user_id) });
-
-    await db
-      .collection("semester")
-      .deleteMany({ user_id: verify_access_token.user_id });
-
-    await db
-      .collection("assignment")
-      .deleteMany({ user_id: verify_access_token.user_id });
 
     res.json({
       status: "ok",
