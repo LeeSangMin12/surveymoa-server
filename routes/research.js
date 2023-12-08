@@ -631,4 +631,37 @@ router.post("/unlike_research", async (req, res) => {
   }
 });
 
+/**
+ * 구글 폼 정보 가져오기
+ */
+router.post("/get_form_info", async (req, res) => {
+  try {
+    const form_info = await fetch(
+      "https://docs.google.com/forms/u/0/d/e/1FAIpQLSd_c_UHtj5cOMX7u1b9aA9dSg67e2eDxWRGKgy-vXi7kthtdg/formResponse"
+    )
+      .then((response) => response.text())
+      .then((data) => {
+        return data;
+        // 가져온 문서에 대한 처리 작업을 수행합니다.
+      })
+      .catch((error) => {
+        // 오류 처리
+        console.log("문서를 가져오는 중 오류가 발생했습니다.", error);
+      });
+
+    res.json({
+      status: "ok",
+      data: {
+        form_info,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
 export default router;
