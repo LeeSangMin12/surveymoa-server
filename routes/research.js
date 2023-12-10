@@ -195,17 +195,32 @@ router.post("/get_research", async (req, res) => {
  */
 router.post("/get_research_arr_category", async (req, res) => {
   try {
-    const { category } = req.body.data;
+    const { category, last_research_id } = req.body.data;
+
+    const research_filter =
+      last_research_id === ""
+        ? {}
+        : { _id: { $lt: ObjectId(last_research_id) } };
+
+    const category_research_filter =
+      last_research_id === ""
+        ? { category: category }
+        : { _id: { $lt: ObjectId(last_research_id) }, category: category };
 
     let research_arr;
     if (category === "전체") {
-      research_arr = await db.collection("research").find().toArray();
+      research_arr = await db
+        .collection("research")
+        .find(research_filter)
+        .sort({ _id: -1 })
+        .limit(10)
+        .toArray();
     } else {
       research_arr = await db
         .collection("research")
-        .find({
-          category: category,
-        })
+        .find(category_research_filter)
+        .sort({ _id: -1 })
+        .limit(10)
         .toArray();
     }
 
@@ -234,6 +249,7 @@ router.post("/get_research_arr_by_user_id", async (req, res) => {
       .find({
         user_id,
       })
+      .sort({ _id: -1 })
       .toArray();
 
     res.json({

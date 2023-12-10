@@ -214,14 +214,16 @@ router.post("/search_user_arr", async (req, res) => {
     const { search_word, last_user_id } = req.body.data;
 
     let search_filter;
+    //처음 조회할때
     if (last_user_id === "") {
       search_filter = search_word === "" ? {} : { hashtag_arr: search_word };
     } else {
       search_filter =
         search_word === ""
-          ? { _id: { $gt: ObjectId(last_user_id) } }
-          : { _id: { $gt: ObjectId(last_user_id) }, hashtag_arr: search_word };
+          ? { _id: { $lt: ObjectId(last_user_id) } }
+          : { _id: { $lt: ObjectId(last_user_id) }, hashtag_arr: search_word };
     }
+
     const user_info_arr = await db
       .collection("login")
       .find(search_filter, {
@@ -243,7 +245,7 @@ router.post("/search_user_arr", async (req, res) => {
           like_research_obj: 1,
         },
       })
-      .sort({ _id: 1 })
+      .sort({ _id: -1 })
       .limit(10)
       .toArray();
 
