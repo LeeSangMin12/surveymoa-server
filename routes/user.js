@@ -207,8 +207,63 @@ router.post("/get_info_by_user_id", async (req, res) => {
 });
 
 /**
+ * 전문가 조사 검색
+ */
+router.post("/search_user_arr", async (req, res) => {
+  try {
+    const { search_word, last_user_id } = req.body.data;
+
+    let search_filter;
+    if (last_user_id === "") {
+      search_filter = search_word === "" ? {} : { hashtag_arr: search_word };
+    } else {
+      search_filter =
+        search_word === ""
+          ? { _id: { $gt: ObjectId(last_user_id) } }
+          : { _id: { $gt: ObjectId(last_user_id) }, hashtag_arr: search_word };
+    }
+    const user_info_arr = await db
+      .collection("login")
+      .find(search_filter, {
+        projection: {
+          _id: 1,
+          nickname: 1,
+          gender: 1,
+          year_of_birth: 1,
+          means_of_contact: 1,
+          hashtag_arr: 1,
+          self_introduction: 1,
+          user_img: 1,
+          participate_research_arr: 1,
+          participate_research_count: 1,
+          rating_research_count: 1,
+          rating_research_arr: 1,
+          rating_research: 1,
+          like_research_count: 1,
+          like_research_obj: 1,
+        },
+      })
+      .sort({ _id: 1 })
+      .limit(10)
+      .toArray();
+
+    res.json({
+      status: "ok",
+      data: {
+        user_info_arr: user_info_arr,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
  * 유저 정보 리스트를 가져오기
- *
  */
 router.post("/get_user_info_arr", async (req, res) => {
   try {
