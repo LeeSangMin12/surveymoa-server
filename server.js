@@ -1,7 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import axios from "axios";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -14,7 +13,7 @@ import semester_router from "./routes/semester.js";
 import user_router from "./routes/user.js";
 
 dotenv.config(); //env 파일 가져오기
-const { PORT, ENV } = process.env;
+const { PORT, ENV, CORS } = process.env;
 
 const app = express();
 
@@ -25,7 +24,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   cors({
-    origin: "https://survey-moa.netlify.app",
+    origin: CORS,
     credentials: true,
   })
 );

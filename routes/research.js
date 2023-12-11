@@ -308,7 +308,7 @@ router.post("/get_research_arr_by_research_id", async (req, res) => {
  */
 router.post("/participate_research", async (req, res) => {
   try {
-    const { research_id } = req.body.data;
+    const { research_id, cost_per_person } = req.body.data;
 
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
@@ -317,14 +317,27 @@ router.post("/participate_research", async (req, res) => {
       .collection("login")
       .findOne({ _id: ObjectId(verify_access_token.user_id) });
 
+    //유저가 참여한 설문
     await db.collection("login").updateOne(
       { _id: ObjectId(verify_access_token.user_id) },
       {
-        $push: { participate_research_arr: research_id },
-        $inc: { participate_research_count: 1 },
+        $push: {
+          participate_research_arr: research_id,
+          accumulated_money_arr: {
+            reason: "participate_research",
+            research_id: research_id,
+            cost_per_person: Number(cost_per_person),
+            date: new Date(),
+          },
+        },
+        $inc: {
+          participate_research_count: 1,
+          accumulated_money: Number(cost_per_person),
+        },
       }
     );
 
+    //참여자 수
     await db.collection("research").updateOne(
       { _id: ObjectId(research_id) },
       {

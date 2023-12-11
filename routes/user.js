@@ -54,6 +54,8 @@ router.post("/initial_setting", async (req, res) => {
           like_user_arr: [],
           liked_user_count: 0,
           liked_user_arr: [],
+          accumulated_money: 0,
+          accumulated_money_arr: [],
         },
       }
     );
