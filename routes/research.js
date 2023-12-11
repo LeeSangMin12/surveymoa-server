@@ -37,7 +37,9 @@ router.post(
         min_age,
         max_age,
         gender,
+        cost_per_person,
         deadline,
+        contact,
         form_link,
         desc,
       } = req.body;
@@ -52,7 +54,7 @@ router.post(
         uri: val.location,
       }));
 
-      await db.collection("research").insertOne({
+      await db.collection("examine_research").insertOne({
         user_id: verify_access_token.user_id,
         category,
         title,
@@ -60,7 +62,9 @@ router.post(
         min_age,
         max_age,
         gender,
+        cost_per_person,
         deadline,
+        contact,
         form_link,
         desc,
         img_arr: uploaded_file,
@@ -101,7 +105,9 @@ router.post(
         min_age,
         max_age,
         gender,
+        cost_per_person,
         deadline,
+        contact,
         form_link,
         desc,
       } = req.body;
@@ -129,7 +135,9 @@ router.post(
             min_age,
             max_age,
             gender,
+            cost_per_person,
             deadline,
+            contact,
             form_link,
             desc,
             img_arr: uploaded_file,
@@ -169,7 +177,9 @@ router.post("/get_research", async (req, res) => {
       min_age: research.min_age,
       max_age: research.max_age,
       gender: research.gender,
+      cost_per_person: research.cost_per_person,
       deadline: research.deadline,
+      contact: research.contact,
       form_link: research.form_link,
       desc: research.desc,
       img_arr: research.img_arr,

@@ -184,6 +184,8 @@ router.post("/get_info_by_user_id", async (req, res) => {
       year_of_birth: get_user_info.year_of_birth,
       rating_research: get_user_info.rating_research,
       rating_research_arr: get_user_info.rating_research_arr,
+      like_research_arr: get_user_info.like_research_arr,
+      like_research_count: get_user_info.like_research_count,
       like_user_count: get_user_info.like_user_count,
       like_user_arr: get_user_info.like_user_arr,
       liked_user_count: get_user_info.liked_user_count,
@@ -388,7 +390,7 @@ router.post("/regi_self_introduction", async (req, res) => {
  */
 router.post("/like_user", async (req, res) => {
   try {
-    const { user_id } = req.body.data;
+    const { user_id, user_img, my_img } = req.body.data;
 
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
@@ -396,7 +398,12 @@ router.post("/like_user", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(verify_access_token.user_id) },
       {
-        $push: { like_user_arr: user_id },
+        $push: {
+          like_user_arr: {
+            user_id: user_id,
+            user_img: user_img,
+          },
+        },
         $inc: { like_user_count: 1 },
       }
     );
@@ -404,7 +411,12 @@ router.post("/like_user", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(user_id) },
       {
-        $push: { liked_user_arr: verify_access_token.user_id },
+        $push: {
+          liked_user_arr: {
+            user_id: verify_access_token.user_id,
+            user_img: my_img,
+          },
+        },
         $inc: { liked_user_count: 1 },
       }
     );
@@ -434,7 +446,11 @@ router.post("/unlike_user", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(verify_access_token.user_id) },
       {
-        $pull: { like_user_arr: user_id },
+        $pull: {
+          like_user_arr: {
+            user_id: user_id,
+          },
+        },
         $inc: { like_user_count: -1 },
       }
     );
@@ -442,7 +458,11 @@ router.post("/unlike_user", async (req, res) => {
     await db.collection("login").updateOne(
       { _id: ObjectId(user_id) },
       {
-        $pull: { liked_user_arr: verify_access_token.user_id },
+        $pull: {
+          liked_user_arr: {
+            user_id: verify_access_token.user_id,
+          },
+        },
         $inc: { liked_user_count: -1 },
       }
     );
