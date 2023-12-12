@@ -148,6 +148,8 @@ router.post("/get_info", async (req, res) => {
       rating_research_arr: get_user_info.rating_research_arr,
       liked_user_count: get_user_info.liked_user_count,
       participate_research_arr: get_user_info.participate_research_arr,
+      accumulated_money: get_user_info.accumulated_money,
+      accumulated_money_arr: get_user_info.accumulated_money_arr,
     };
 
     res.json({
