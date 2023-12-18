@@ -1,9 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
 
 import research_router from "./routes/research.js";
 import check_router from "./routes/check.js";
@@ -18,23 +15,14 @@ const { PORT, ENV, CORS } = process.env;
 
 const app = express();
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   cors({
-    origin: "https://survey-moa.netlify.app",
+    origin: CORS,
     credentials: true,
   })
 );
-// app.use(
-//   cors({
-//     origin: "*", // 모든 출처 허용
-//     credentials: true,
-//   })
-// );
 
 app.use("/research", research_router);
 app.use("/check", check_router);

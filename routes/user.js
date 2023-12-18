@@ -222,12 +222,22 @@ router.post("/search_user_arr", async (req, res) => {
     let search_filter;
     //처음 조회할때
     if (last_user_id === "") {
-      search_filter = search_word === "" ? {} : { hashtag_arr: search_word };
+      search_filter =
+        search_word === ""
+          ? { nickname: { $exists: true } }
+          : { nickname: { $exists: true }, hashtag_arr: search_word };
     } else {
       search_filter =
         search_word === ""
-          ? { _id: { $lt: ObjectId(last_user_id) } }
-          : { _id: { $lt: ObjectId(last_user_id) }, hashtag_arr: search_word };
+          ? {
+              _id: { $lt: ObjectId(last_user_id) },
+              nickname: { $exists: true },
+            }
+          : {
+              _id: { $lt: ObjectId(last_user_id) },
+              nickname: { $exists: true },
+              hashtag_arr: search_word,
+            };
     }
 
     const user_info_arr = await db
