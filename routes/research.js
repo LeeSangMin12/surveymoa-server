@@ -23,6 +23,47 @@ MongoClient.connect(
 );
 
 /**
+ * 설문조사 리스트 조회
+ * @param {*} last_research_id
+ * @returns research_arr
+ */
+const get_research_arr = async (last_research_id) => {
+  const research_filter =
+    last_research_id === "" ? {} : { _id: { $lt: ObjectId(last_research_id) } };
+
+  const research_arr = await db
+    .collection("research")
+    .find(research_filter)
+    .sort({ _id: -1 })
+    .limit(10)
+    .toArray();
+
+  return research_arr;
+};
+
+/**
+ * 설문조사 리스트 카테고리별로 조회
+ * @param {*} last_research_id
+ * @param {*} category
+ * @returns research_arr
+ */
+const get_research_arr_by_category = async (last_research_id, category) => {
+  const research_filter =
+    last_research_id === ""
+      ? { category: category }
+      : { _id: { $lt: ObjectId(last_research_id) }, category: category };
+
+  const research_arr = await db
+    .collection("research")
+    .find(research_filter)
+    .sort({ _id: -1 })
+    .limit(10)
+    .toArray();
+
+  return research_arr;
+};
+
+/**
  * 설문 조사 등록
  */
 router.post(
@@ -201,42 +242,28 @@ router.post("/get_research", async (req, res) => {
 });
 
 /**
- * 설문조사 리스트 카테고리 별로 가져오기
+ * 설문조사 리스트 가져오기
  */
-router.post("/get_research_arr_category", async (req, res) => {
+router.post("/get_research_arr", async (req, res) => {
   try {
-    const { category, last_research_id } = req.body.data;
-
-    const research_filter =
-      last_research_id === ""
-        ? {}
-        : { _id: { $lt: ObjectId(last_research_id) } };
-
-    const category_research_filter =
-      last_research_id === ""
-        ? { category: category }
-        : { _id: { $lt: ObjectId(last_research_id) }, category: category };
+    const {
+      category,
+      last_research_id, //무한스크롤에 필요
+    } = req.body.data;
 
     let research_arr;
     if (category === "전체") {
-      research_arr = await db
-        .collection("research")
-        .find(research_filter)
-        .sort({ _id: -1 })
-        .limit(10)
-        .toArray();
+      research_arr = await get_research_arr(last_research_id);
     } else {
-      research_arr = await db
-        .collection("research")
-        .find(category_research_filter)
-        .sort({ _id: -1 })
-        .limit(10)
-        .toArray();
+      research_arr = await get_research_arr_by_category(
+        last_research_id,
+        category
+      );
     }
 
     res.json({
       status: "ok",
-      data: research_arr,
+      data: { research_arr },
     });
   } catch (error) {
     console.error("error:", error);
@@ -660,39 +687,6 @@ router.post("/unlike_research", async (req, res) => {
 
     res.json({
       status: "ok",
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-/**
- * 구글 폼 정보 가져오기
- */
-router.post("/get_form_info", async (req, res) => {
-  try {
-    const form_info = await fetch(
-      "https://docs.google.com/forms/u/0/d/e/1FAIpQLSd_c_UHtj5cOMX7u1b9aA9dSg67e2eDxWRGKgy-vXi7kthtdg/formResponse"
-    )
-      .then((response) => response.text())
-      .then((data) => {
-        return data;
-        // 가져온 문서에 대한 처리 작업을 수행합니다.
-      })
-      .catch((error) => {
-        // 오류 처리
-        console.log("문서를 가져오는 중 오류가 발생했습니다.", error);
-      });
-
-    res.json({
-      status: "ok",
-      data: {
-        form_info,
-      },
     });
   } catch (error) {
     console.error("error:", error);
