@@ -27,13 +27,24 @@ MongoClient.connect(
  * @param {*} last_research_id
  * @returns research_arr
  */
-const get_research_arr = async (last_research_id) => {
-  const research_filter =
-    last_research_id === "" ? {} : { _id: { $lt: ObjectId(last_research_id) } };
-
+const get_research_arr = async (research_filter) => {
   const research_arr = await db
     .collection("research")
-    .find(research_filter)
+    .find(research_filter, {
+      projection: {
+        _id: 1,
+        category: 1,
+        title: 1,
+        recruitment_num: 1,
+        min_age: 1,
+        max_age: 1,
+        gender: 1,
+        cost_per_person: 1,
+        deadline: 1,
+        img_arr: 1,
+        participate_user_count: 1,
+      },
+    })
     .sort({ _id: -1 })
     .limit(10)
     .toArray();
@@ -42,26 +53,43 @@ const get_research_arr = async (last_research_id) => {
 };
 
 /**
- * 설문조사 리스트 카테고리별로 조회
- * @param {*} last_research_id
- * @param {*} category
- * @returns research_arr
+ * 설문조사 리스트 카테고리별로 가져오기
  */
-const get_research_arr_by_category = async (last_research_id, category) => {
-  const research_filter =
-    last_research_id === ""
-      ? { category: category }
-      : { _id: { $lt: ObjectId(last_research_id) }, category: category };
+router.post("/get_research_arr_by_category", async (req, res) => {
+  try {
+    const {
+      category,
+      last_research_id, //무한스크롤에 필요
+    } = req.body.data;
 
-  const research_arr = await db
-    .collection("research")
-    .find(research_filter)
-    .sort({ _id: -1 })
-    .limit(10)
-    .toArray();
+    let research_filter = "";
 
-  return research_arr;
-};
+    if (category === "전체") {
+      research_filter =
+        last_research_id === ""
+          ? {}
+          : { _id: { $lt: ObjectId(last_research_id) } };
+    } else {
+      research_filter =
+        last_research_id === ""
+          ? { category: category }
+          : { _id: { $lt: ObjectId(last_research_id) }, category: category };
+    }
+
+    const research_arr = await get_research_arr(research_filter);
+
+    res.json({
+      status: "ok",
+      data: { research_arr },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
 
 /**
  * 설문 조사 등록
@@ -231,39 +259,6 @@ router.post("/get_research", async (req, res) => {
     res.json({
       status: "ok",
       data: research_obj,
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-/**
- * 설문조사 리스트 가져오기
- */
-router.post("/get_research_arr", async (req, res) => {
-  try {
-    const {
-      category,
-      last_research_id, //무한스크롤에 필요
-    } = req.body.data;
-
-    let research_arr;
-    if (category === "전체") {
-      research_arr = await get_research_arr(last_research_id);
-    } else {
-      research_arr = await get_research_arr_by_category(
-        last_research_id,
-        category
-      );
-    }
-
-    res.json({
-      status: "ok",
-      data: { research_arr },
     });
   } catch (error) {
     console.error("error:", error);
