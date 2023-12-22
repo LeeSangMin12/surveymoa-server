@@ -42,6 +42,7 @@ const get_research_arr = async (research_filter) => {
         cost_per_person: 1,
         deadline: 1,
         img_arr: 1,
+        participate_user_arr: 1,
         participate_user_count: 1,
       },
     })
