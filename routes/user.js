@@ -207,7 +207,7 @@ router.post("/get_info", async (req, res) => {
 });
 
 /**
- * 유저 정보를 아이디로 가져오기
+ * 유저 아이디로 유저 정보 조회
  */
 router.post("/get_info_by_user_id", async (req, res) => {
   try {
@@ -240,6 +240,40 @@ router.post("/get_info_by_user_id", async (req, res) => {
       status: "ok",
       data: {
         user_info: user_info,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
+ * 유저 조사 찜 목록 조회
+ */
+router.post("/get_like_research_arr", async (req, res) => {
+  try {
+    const { user_id } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const user = await db
+      .collection("login")
+      .findOne(
+        {
+          _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
+        },
+        { projection: { like_research_arr: 1 } }
+      );
+
+    res.json({
+      status: "ok",
+      data: {
+        like_research_arr: user.like_research_arr,
       },
     });
   } catch (error) {
@@ -289,15 +323,8 @@ router.post("/search_user_arr", async (req, res) => {
           year_of_birth: 1,
           means_of_contact: 1,
           hashtag_arr: 1,
-          self_introduction: 1,
           user_img: 1,
-          participate_research_arr: 1,
-          participate_research_count: 1,
-          rating_research_count: 1,
-          rating_research_arr: 1,
           rating_research: 1,
-          like_research_count: 1,
-          like_research_obj: 1,
         },
       })
       .sort({ _id: -1 })
