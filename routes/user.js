@@ -261,14 +261,12 @@ router.post("/get_like_research_arr", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    const user = await db
-      .collection("login")
-      .findOne(
-        {
-          _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
-        },
-        { projection: { like_research_arr: 1 } }
-      );
+    const user = await db.collection("login").findOne(
+      {
+        _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
+      },
+      { projection: { like_research_arr: 1 } }
+    );
 
     res.json({
       status: "ok",
