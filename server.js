@@ -2,6 +2,9 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 
+import { createServer } from "http";
+import { Server } from "socket.io";
+
 import chat_router from "./routes/chat.js";
 import check_router from "./routes/check.js";
 import login_router from "./routes/login.js";
@@ -23,6 +26,14 @@ app.use(
   })
 );
 
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
 app.use("/chat", chat_router);
 app.use("/check", check_router);
 app.use("/login", login_router);
@@ -30,6 +41,27 @@ app.use("/research", research_router);
 app.use("/user", user_router);
 app.use("/withdrawal", withdrawal_router);
 
-app.listen(PORT, () => {
+io.on("connection", (socket) => {
+  console.log("새로운 사용자가 연결되었습니다.");
+
+  socket.on("request_join", (data) => {
+    socket.join(data);
+  });
+
+  socket.on("message", (message) => {
+    io.to(message.room_id).emit("message_reception", {
+      msg: message.msg,
+      user_id: message.user_id,
+      date: message.date,
+    });
+  });
+
+  socket.on("force_disconnect", (chatroom_id) => {
+    socket.leave(chatroom_id);
+    console.log("사용자와의 연결이 종료되었습니다.");
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`listening on ${PORT}`);
 });
