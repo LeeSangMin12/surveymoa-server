@@ -44,8 +44,8 @@ app.use("/withdrawal", withdrawal_router);
 io.on("connection", (socket) => {
   console.log("새로운 사용자가 연결되었습니다.");
 
-  socket.on("request_join", (data) => {
-    socket.join(data);
+  socket.on("request_join", (chatroom_id) => {
+    socket.join(chatroom_id);
   });
 
   socket.on("message", (message) => {
@@ -58,9 +58,13 @@ io.on("connection", (socket) => {
     store_chat(message);
   });
 
-  socket.on("force_disconnect", (chatroom_id) => {
+  socket.on("leave_chatrooom", (chatroom_id) => {
     socket.leave(chatroom_id);
     console.log("사용자와의 연결이 종료되었습니다.");
+  });
+
+  socket.on("disconnect", () => {
+    console.log("disconnect" + socket.id); // undefined
   });
 });
 
