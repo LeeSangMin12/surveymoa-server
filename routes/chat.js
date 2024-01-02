@@ -115,6 +115,15 @@ router.post("/get_chatroom_user", async (req, res) => {
       }
     );
 
+    if (
+      verify_access_token.user_id !== chatroom_info.user_id &&
+      verify_access_token.user_id !== chatroom_info.particiapnt_user_id
+    ) {
+      return res.json({
+        status: "false",
+      });
+    }
+
     //내가 만든 채팅방일때
     if (chatroom_info.user_id === verify_access_token.user_id) {
       participant_user_id = chatroom_info.particiapnt_user_id;
@@ -127,7 +136,6 @@ router.post("/get_chatroom_user", async (req, res) => {
       { _id: ObjectId(participant_user_id) },
       {
         projection: {
-          _id: 0,
           nickname: 1,
           user_img: 1,
         },

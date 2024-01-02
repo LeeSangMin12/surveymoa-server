@@ -398,6 +398,46 @@ router.post("/get_user_info_arr", async (req, res) => {
 });
 
 /**
+ * 유저 정보 리스트를 userid값으로 조회
+ */
+router.post("/get_user_info_arr_by_id", async (req, res) => {
+  try {
+    const { user_id_arr } = req.body.data;
+
+    const user_id_objectid_arr = user_id_arr.map((id) => ObjectId(id));
+
+    const user_info_arr = await db
+      .collection("login")
+      .find(
+        {
+          _id: { $in: user_id_objectid_arr },
+        },
+        {
+          projection: {
+            _id: 0,
+            nickname: 1,
+            user_img: 1,
+          },
+        }
+      )
+      .toArray();
+
+    res.json({
+      status: "ok",
+      data: {
+        user_info_arr: user_info_arr,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
  * 해시태그 등록
  */
 router.post("/regi_hashtag_arr", async (req, res) => {
