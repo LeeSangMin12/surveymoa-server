@@ -2,7 +2,7 @@ import express from "express";
 import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 
-import { make_jwt, verify_jwt } from "../libs/common.js";
+import { verify_jwt } from "../libs/common.js";
 
 dotenv.config(); //env 파일 가져오기
 const { DB_URL } = process.env;
@@ -21,6 +21,18 @@ MongoClient.connect(
     db = client.db("survey_moa");
   }
 );
+
+/**
+ * 채팅 저장
+ */
+export const store_chat = async (message) => {
+  await db.collection("chat").insertOne({
+    room_id: ObjectId(message.room_id),
+    msg: message.msg,
+    user_id: message.user_id,
+    date: message.date,
+  });
+};
 
 /**
  * 채팅룸 참가
@@ -42,6 +54,35 @@ router.post("/participant_chatroom", async (req, res) => {
       status: "ok",
       data: {
         chatroom_id: chatroom.ops[0]._id,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 채팅룸 리스트 조회
+ */
+router.post("/get_chat_arr", async (req, res) => {
+  try {
+    const { chatroom_id } = req.body.data;
+
+    const chat_arr = await db
+      .collection("chat")
+      .find({
+        room_id: ObjectId(chatroom_id),
+      })
+      .toArray();
+
+    res.json({
+      status: "ok",
+      data: {
+        chat_arr,
       },
     });
   } catch (error) {

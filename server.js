@@ -5,7 +5,7 @@ import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
-import chat_router from "./routes/chat.js";
+import chat_router, { store_chat } from "./routes/chat.js";
 import check_router from "./routes/check.js";
 import login_router from "./routes/login.js";
 import research_router from "./routes/research.js";
@@ -54,6 +54,8 @@ io.on("connection", (socket) => {
       user_id: message.user_id,
       date: message.date,
     });
+
+    store_chat(message);
   });
 
   socket.on("force_disconnect", (chatroom_id) => {
