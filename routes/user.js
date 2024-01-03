@@ -414,7 +414,7 @@ router.post("/get_user_info_arr_by_id", async (req, res) => {
         },
         {
           projection: {
-            _id: 0,
+            _id: 1,
             nickname: 1,
             user_img: 1,
           },

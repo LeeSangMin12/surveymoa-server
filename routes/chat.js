@@ -44,18 +44,30 @@ router.post("/participant_chatroom", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    const chatroom = await db.collection("chatroom").insertOne({
-      user_id: verify_access_token.user_id,
+    const is_exist_chatroom = await db.collection("chatroom").findOne({
       particiapnt_user_id: particiapnt_user_id,
-      date: new Date(),
     });
 
-    res.json({
-      status: "ok",
-      data: {
-        chatroom_id: chatroom.ops[0]._id,
-      },
-    });
+    if (is_exist_chatroom) {
+      res.json({
+        status: "ok",
+        data: {
+          chatroom_id: is_exist_chatroom._id,
+        },
+      });
+    } else {
+      const chatroom = await db.collection("chatroom").insertOne({
+        user_id: verify_access_token.user_id,
+        particiapnt_user_id: particiapnt_user_id,
+        date: new Date(),
+      });
+      res.json({
+        status: "ok",
+        data: {
+          chatroom_id: chatroom.ops[0]._id,
+        },
+      });
+    }
   } catch (error) {
     console.error("error:", error);
     res.status(500).json({

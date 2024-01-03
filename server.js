@@ -64,7 +64,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("disconnect" + socket.id); // undefined
+    console.log("disconnect " + socket.id); // undefined
   });
 });
 
