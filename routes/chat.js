@@ -148,6 +148,8 @@ router.post("/get_chatroom_user", async (req, res) => {
       { _id: ObjectId(participant_user_id) },
       {
         projection: {
+          _id: 0,
+          user_id: "$_id",
           nickname: 1,
           user_img: 1,
         },

@@ -27,7 +27,7 @@ MongoClient.connect(
  */
 router.post("/initial_setting", async (req, res) => {
   try {
-    const { nickname, gender, year_of_birth, means_of_contact } = req.body.data;
+    const { nickname, gender, year_of_birth } = req.body.data;
 
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
@@ -39,7 +39,6 @@ router.post("/initial_setting", async (req, res) => {
           nickname,
           gender,
           year_of_birth,
-          means_of_contact,
           hashtag_arr: [],
           self_introduction: "",
           user_img: "",
@@ -80,8 +79,7 @@ router.post(
   s3_file_upload("user/profile_img").single("user_img"),
   async (req, res) => {
     try {
-      const { user_img, nickname, gender, year_of_birth, means_of_contact } =
-        req.body;
+      const { user_img, nickname, gender, year_of_birth } = req.body;
 
       let img_url;
       if (req.file === undefined) {
@@ -105,7 +103,6 @@ router.post(
             nickname,
             gender,
             year_of_birth,
-            means_of_contact,
             img_url,
           },
         }
@@ -139,7 +136,6 @@ router.post("/get_initial_info", async (req, res) => {
           _id: 1,
           nickname: 1,
           gender: 1,
-          means_of_contact: 1,
           year_of_birth: 1,
           hashtag_arr: 1,
           self_introduction: 1,
@@ -178,7 +174,6 @@ router.post("/get_info", async (req, res) => {
     const user_info = {
       user_img: get_user_info.user_img,
       gender: get_user_info.gender,
-      means_of_contact: get_user_info.means_of_contact,
       hashtag_arr: get_user_info.hashtag_arr,
       self_introduction: get_user_info.self_introduction,
       nickname: get_user_info.nickname,
@@ -220,7 +215,6 @@ router.post("/get_info_by_user_id", async (req, res) => {
     const user_info = {
       user_img: get_user_info.user_img,
       gender: get_user_info.gender,
-      means_of_contact: get_user_info.means_of_contact,
       hashtag_arr: get_user_info.hashtag_arr,
       self_introduction: get_user_info.self_introduction,
       nickname: get_user_info.nickname,
@@ -240,6 +234,38 @@ router.post("/get_info_by_user_id", async (req, res) => {
       status: "ok",
       data: {
         user_info: user_info,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
+ * 유저 유저 찜 목록 조회
+ */
+router.post("/get_like_user_arr", async (req, res) => {
+  try {
+    const { user_id } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const user = await db.collection("login").findOne(
+      {
+        _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
+      },
+      { projection: { like_user_arr: 1 } }
+    );
+
+    res.json({
+      status: "ok",
+      data: {
+        like_user_arr: user.like_user_arr,
       },
     });
   } catch (error) {
@@ -319,7 +345,6 @@ router.post("/search_user_arr", async (req, res) => {
           nickname: 1,
           gender: 1,
           year_of_birth: 1,
-          means_of_contact: 1,
           hashtag_arr: 1,
           user_img: 1,
           rating_research: 1,
@@ -366,7 +391,6 @@ router.post("/get_user_info_arr", async (req, res) => {
             nickname: 1,
             gender: 1,
             year_of_birth: 1,
-            means_of_contact: 1,
             hashtag_arr: 1,
             self_introduction: 1,
             user_img: 1,
@@ -504,7 +528,7 @@ router.post("/regi_self_introduction", async (req, res) => {
 });
 
 /**
- * 유저 찜 기능
+ * 유저 찜
  */
 router.post("/like_user", async (req, res) => {
   try {

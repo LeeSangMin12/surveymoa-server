@@ -25,7 +25,41 @@ MongoClient.connect(
 /**
  * 출금 정보 가져오기
  */
-router.post("/get_withdrawal", async (req, res) => {
+router.post("/get_withdrawal_obj", async (req, res) => {
+  try {
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const withdrawal_obj = await db.collection("login").findOne(
+      { _id: ObjectId(verify_access_token.user_id) },
+      {
+        projection: {
+          _id: 0,
+          accumulated_money_arr: 1,
+          accumulated_money: 1,
+        },
+      }
+    );
+
+    res.json({
+      status: "ok",
+      data: {
+        withdrawal_obj: withdrawal_obj,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 출금 신청 여부 가져오기
+ */
+router.post("/is_application_withdrawal", async (req, res) => {
   try {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
