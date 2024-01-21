@@ -1,17 +1,16 @@
 import express from "express";
 import axios from "axios";
-import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
+import sql from "../db.js";
 import { make_jwt } from "../libs/common.js";
 
 dotenv.config(); //env 파일 가져오기
 const {
-  DB_URL,
   REDIRECT_URI,
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -24,19 +23,6 @@ const {
 } = process.env;
 
 const router = express.Router();
-const MongoClient = mongodb.MongoClient;
-const ObjectId = mongodb.ObjectId;
-let db;
-
-MongoClient.connect(
-  DB_URL,
-  { useNewUrlParser: true, useUnifiedTopology: true },
-  (err, client) => {
-    if (err) throw err;
-
-    db = client.db("survey_moa");
-  }
-);
 
 const __filename = fileURLToPath(new URL(import.meta.url));
 const __dirname = dirname(__filename);
@@ -81,7 +67,7 @@ const platform_config = {
 };
 
 /**
- * authorization_code로 token을 발급
+ * authorization_code로 token 발급
  */
 const get_token = async (platform, token_url, authorization_code) => {
   let auth_url =
@@ -111,27 +97,33 @@ const get_token = async (platform, token_url, authorization_code) => {
 };
 
 /**
- * 가입한 사용자의 고유 id 반환
+ * 가입한 사용자의 고유 platform id 반환
+ * apple은 idtoken을 api 요청하지 않아도 반환해줌.
  */
-const get_user_id = async (platform, user_info_url, access_token) => {
-  const user_info = await axios
-    .get(user_info_url, {
-      headers: {
-        authorization: `Bearer ${access_token}`,
-        "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
-      },
-    })
-    .then((el) => {
-      return el.data;
-    })
-    .catch((err) => {
-      console.log("err", err);
-    });
+const get_platform_id = async (platform, user_info_url, token_info) => {
+  if (platform === "apple") {
+    return jwt.decode(token_info.id_token).sub;
+  } else {
+    const user_info = await axios
+      .get(user_info_url, {
+        headers: {
+          authorization: `Bearer ${token_info.access_token}`,
+          "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+        },
+      })
+      .then((el) => {
+        return el.data;
+      })
+      .catch((err) => {
+        console.log("err", err);
+      });
 
-  const id_wrapper = {
-    kakao: (user_info) => user_info.id,
-  };
-  return id_wrapper[platform](user_info);
+    const id_wrapper = {
+      kakao: (user_info) => user_info.id,
+    };
+
+    return id_wrapper[platform](user_info);
+  }
 };
 
 /**
@@ -145,69 +137,71 @@ const get_user_info = async (
   platform_id,
   is_exist_user
 ) => {
-  if (is_exist_user) {
+  if (is_exist_user.length > 0) {
     //이미 등록한 회원일때
     return is_exist_user;
   } else {
     //신규 회원일때
-    const new_user = await db.collection("login").insertOne({
-      platform_access_token: token_info.access_token,
-      platform_refresh_token: token_info.refresh_token,
-      platform_token_expires: token_info.expires_in,
-      auth_platform: auth_platform,
-      platform_id: platform_id,
-    });
+    const new_user = await sql`insert into user_initial 
+      (auth_platform, platform_id, platform_access_token, platform_refresh_token, platform_token_expires)
+    values
+      (${auth_platform}, ${platform_id}, ${token_info.access_token}, ${token_info.refresh_token}, ${token_info.expires_in})
+    returning id
+    `;
 
-    return new_user.ops[0];
+    await sql`insert into users (user_initial_id) values (${new_user[0].id})`;
+
+    return new_user;
   }
 };
 
 const process_login = async (platform, req, res) => {
   const { authorization_code } = req.body.data;
-
   const config = platform_config[platform];
+
   const token_info = await get_token(
     platform,
     config.token_url,
     authorization_code
   );
 
-  let platform_id;
-  if (platform === "apple") {
-    // Apple의 경우 sub를 이메일로 사용(애플은 1.이메일 주소를 안넘겨줄 수 있음, 2.무조건 첫 로그인만 넘겨줌)
-    platform_id = jwt.decode(token_info.id_token).sub;
-  } else {
-    // Google과 Kakao는 API를 통해 이메일을 가져옵니다.
-    platform_id = await get_user_id(
-      platform,
-      config.user_info_url,
-      token_info.access_token
-    );
-  }
+  let platform_id = await get_platform_id(
+    platform,
+    config.user_info_url,
+    token_info
+  );
 
-  const is_exist_user = await db.collection("login").findOne({ platform_id });
+  const is_exist_user = await sql`
+  select id from user_initial
+  where platform_id = ${platform_id}`;
+
   const user_info = await get_user_info(
     token_info,
     platform,
     platform_id,
     is_exist_user
   );
-  const { access_token, refresh_token } = make_jwt(user_info._id, platform_id);
 
-  //refresh token만 db에 저장 - access token은 client가 관리
-  await db
-    .collection("login")
-    .updateOne(
-      { _id: ObjectId(user_info._id) },
-      { $set: { refresh_token: refresh_token } }
-    );
+  const { access_token, refresh_token } = make_jwt(
+    user_info[0].id,
+    platform_id
+  );
 
-  // 소셜로그인 후 회원가입 정보 등록 안하면 회원가입 하지 않은걸로 처리 (nickname은 가입 필수조건)
-  const registered = user_info && user_info.nickname !== undefined;
+  // refresh token만 db에 저장 - access token은 client가 관리
+  await sql`update user_initial set refresh_token=${refresh_token}
+  where id = ${user_info[0].id}`;
+
+  const registered =
+    (
+      await sql`select nickname from users 
+        where user_initial_id=${user_info[0].id}`
+    )[0].nickname === null
+      ? false
+      : true;
 
   res.json({
     registered: registered.toString(),
-    user_id: user_info._id,
+    user_id: user_info.id,
     access_token: access_token,
   });
 };
