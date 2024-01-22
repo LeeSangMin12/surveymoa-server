@@ -131,7 +131,7 @@ const get_platform_id = async (platform, user_info_url, token_info) => {
  * : 등록된 회원 : db에서 정보 가져옴
  * : 신규 회원 : db에 신규 회원 정보 추가
  */
-const get_user_info = async (
+const get_users_info = async (
   token_info,
   auth_platform,
   platform_id,
@@ -139,7 +139,7 @@ const get_user_info = async (
 ) => {
   if (is_exist_user.length > 0) {
     //이미 등록한 회원일때
-    return is_exist_user;
+    return await sql`select id from users where user_initial_id = ${is_exist_user[0].id}`;
   } else {
     //신규 회원일때
     const new_user = await sql`insert into user_initial 
@@ -149,9 +149,7 @@ const get_user_info = async (
     returning id
     `;
 
-    await sql`insert into users (user_initial_id) values (${new_user[0].id})`;
-
-    return new_user;
+    return await sql`insert into users (user_initial_id) values (${new_user[0].id}) returning id`;
   }
 };
 
@@ -165,7 +163,7 @@ const process_login = async (platform, req, res) => {
     authorization_code
   );
 
-  let platform_id = await get_platform_id(
+  const platform_id = await get_platform_id(
     platform,
     config.user_info_url,
     token_info
@@ -175,7 +173,7 @@ const process_login = async (platform, req, res) => {
   select id from user_initial
   where platform_id = ${platform_id}`;
 
-  const user_info = await get_user_info(
+  const users_info = await get_users_info(
     token_info,
     platform,
     platform_id,
@@ -183,25 +181,28 @@ const process_login = async (platform, req, res) => {
   );
 
   const { access_token, refresh_token } = make_jwt(
-    user_info[0].id,
+    users_info[0].id,
     platform_id
   );
 
+  const user_initial_id =
+    await sql`select user_initial_id from users where id = ${users_info[0].id}`;
+
   // refresh token만 db에 저장 - access token은 client가 관리
   await sql`update user_initial set refresh_token=${refresh_token}
-  where id = ${user_info[0].id}`;
+  where id = ${user_initial_id[0].user_initial_id}`;
 
   const registered =
     (
-      await sql`select nickname from users 
-        where user_initial_id=${user_info[0].id}`
+      await sql`select nickname from users
+        where id=${users_info[0].id}`
     )[0].nickname === null
       ? false
       : true;
 
   res.json({
     registered: registered.toString(),
-    user_id: user_info.id,
+    user_id: users_info[0].id,
     access_token: access_token,
   });
 };
