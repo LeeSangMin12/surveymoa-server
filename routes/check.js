@@ -1,27 +1,12 @@
 import express from "express";
-import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 
 import sql from "../db.js";
 import { make_jwt, verify_jwt } from "../libs/common.js";
 
 dotenv.config(); //env 파일 가져오기
-const { DB_URL } = process.env;
 
 const router = express.Router();
-const MongoClient = mongodb.MongoClient;
-const ObjectId = mongodb.ObjectId;
-let db;
-
-MongoClient.connect(
-  DB_URL,
-  { useNewUrlParser: true, useUnifiedTopology: true },
-  (err, client) => {
-    if (err) throw err;
-
-    db = client.db("survey_moa");
-  }
-);
 
 /**
  * access token 유효성 검사
@@ -36,16 +21,13 @@ router.post("/token", async (req, res) => {
   const { user_id } = req.body.data;
   const token = req.header("Authorization").replace(/^Bearer\s+/, "");
 
-  const user_info = await db.collection("login").findOne({
-    _id: ObjectId(user_id),
-  });
+  const user_initial_info =
+    await sql`select user_initial_id from users where id = ${user_id}`;
+  const users_info =
+    await sql`select refresh_token from user_initial where id = ${user_initial_info[0].id}`;
 
-  if (user_info?.nickname === undefined) {
-    res.json({ status: "token_expired" });
-    return;
-  }
   const verify_access_token = verify_jwt(token);
-  const verify_refresh_token = verify_jwt(user_info.refresh_token);
+  const verify_refresh_token = verify_jwt(users_info[0].refresh_token);
 
   if (verify_access_token === "expired" && verify_refresh_token === "expired") {
     //case1
@@ -76,12 +58,9 @@ router.post("/token", async (req, res) => {
       verify_access_token.user_id,
       verify_access_token.platform_id
     );
-    await db
-      .collection("login")
-      .updateOne(
-        { _id: ObjectId(verify_access_token.user_id) },
-        { $set: { refresh_token: refresh_token } }
-      );
+
+    await sql`update user_initial set refresh_token=${refresh_token} 
+    where id = ${user_initial_info[0].id}`;
     res.json({
       status: "ok",
       data: {
