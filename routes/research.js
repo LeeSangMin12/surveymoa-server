@@ -28,7 +28,7 @@ MongoClient.connect(
  * @param {*} last_research_id
  * @returns research_arr
  */
-const get_research_arr = async (research_filter) => {
+const get_research_arr = async (category, last_research_id) => {
   const research_arr = await sql`select 
       id,
       category,
@@ -42,7 +42,15 @@ const get_research_arr = async (research_filter) => {
       img_arr,
       participant_research_count
     from research
-    ${sql(research_filter)}
+    ${
+      category === "전체"
+        ? last_research_id === ""
+          ? sql`where TRUE`
+          : sql`where id < ${last_research_id}`
+        : last_research_id === ""
+        ? sql`WHERE category = ${category}`
+        : sql`WHERE id < ${last_research_id} and category = ${category}`
+    }
     ORDER BY id desc
     limit 10`;
 
@@ -138,9 +146,7 @@ router.post("/get_research_arr_by_category", async (req, res) => {
 
     if (category === "전체") {
       research_filter =
-        last_research_id === ""
-          ? "WHERE TRUE"
-          : `WHERE id < ${last_research_id}`;
+        last_research_id === "" ? `WHERE id < 59` : `WHERE id < 49`;
     } else {
       research_filter =
         last_research_id === ""
@@ -148,7 +154,7 @@ router.post("/get_research_arr_by_category", async (req, res) => {
           : `WHERE id < ${last_research_id} and category = ${category}`;
     }
 
-    const research_arr = await get_research_arr(research_filter);
+    const research_arr = await get_research_arr(category, last_research_id);
 
     res.json({
       status: "ok",
