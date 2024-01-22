@@ -2,6 +2,7 @@ import express from "express";
 import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 
+import sql from "../db.js";
 import { verify_jwt, s3_file_upload } from "../libs/common.js";
 
 dotenv.config(); //env 파일 가져오기
@@ -28,30 +29,100 @@ MongoClient.connect(
  * @returns research_arr
  */
 const get_research_arr = async (research_filter) => {
-  const research_arr = await db
-    .collection("research")
-    .find(research_filter, {
-      projection: {
-        _id: 1,
-        category: 1,
-        title: 1,
-        recruitment_num: 1,
-        min_age: 1,
-        max_age: 1,
-        gender: 1,
-        cost_per_person: 1,
-        deadline: 1,
-        img_arr: 1,
-        participate_user_arr: 1,
-        participate_user_count: 1,
-      },
-    })
-    .sort({ _id: -1 })
-    .limit(10)
-    .toArray();
+  const research_arr = await sql`select 
+      id,
+      category,
+      title,
+      recruitment_num,
+      min_age,
+      max_age,
+      gender,
+      cost_per_person,
+      deadline,
+      img_arr,
+      participant_research_count
+    from research
+    ${sql(research_filter)}
+    ORDER BY id desc
+    limit 10`;
 
   return research_arr;
 };
+
+/**
+ * 설문조사 등록
+ */
+router.post(
+  "/regi_research",
+  s3_file_upload("research/img").array("img_arr"),
+  async (req, res) => {
+    try {
+      const {
+        category,
+        title,
+        recruitment_num,
+        min_age,
+        max_age,
+        gender,
+        cost_per_person,
+        deadline,
+        form_link,
+        research_explanation,
+      } = req.body;
+      const file_url = req.files;
+
+      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+      const verify_access_token = verify_jwt(token);
+
+      const uploaded_file = file_url.map((val) => ({
+        name: Buffer.from(val.originalname, "latin1").toString("utf8"),
+        size: val.size,
+        uri: val.location,
+      }));
+
+      await sql`insert into examine_research
+        (
+        user_id,
+        category,
+        title,
+        recruitment_num,
+        min_age,
+        max_age,
+        gender,
+        cost_per_person,
+        deadline,
+        form_link,
+        research_explanation,
+        img_arr
+        )
+      values
+        (
+          ${verify_access_token.user_id},
+          ${category},
+          ${title},
+          ${Number(recruitment_num)},
+          ${min_age},
+          ${max_age},
+          ${gender},
+          ${Number(cost_per_person)},
+          ${Date(deadline)},
+          ${form_link},
+          ${research_explanation},
+          ${uploaded_file}
+        )`;
+
+      res.json({
+        status: "ok",
+      });
+    } catch (error) {
+      console.error("error:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Internal server error",
+      });
+    }
+  }
+);
 
 /**
  * 설문조사 리스트 카테고리별로 가져오기
@@ -68,13 +139,13 @@ router.post("/get_research_arr_by_category", async (req, res) => {
     if (category === "전체") {
       research_filter =
         last_research_id === ""
-          ? {}
-          : { _id: { $lt: ObjectId(last_research_id) } };
+          ? "WHERE TRUE"
+          : `WHERE id < ${last_research_id}`;
     } else {
       research_filter =
         last_research_id === ""
-          ? { category: category }
-          : { _id: { $lt: ObjectId(last_research_id) }, category: category };
+          ? `WHERE category = ${category}`
+          : `WHERE id < ${last_research_id} and category = ${category}`;
     }
 
     const research_arr = await get_research_arr(research_filter);
@@ -91,73 +162,6 @@ router.post("/get_research_arr_by_category", async (req, res) => {
     });
   }
 });
-
-/**
- * 설문 조사 등록
- */
-router.post(
-  "/regi_research",
-  s3_file_upload("research/img").array("img_arr"),
-  async (req, res) => {
-    try {
-      const {
-        category,
-        title,
-        recruitment_num,
-        min_age,
-        max_age,
-        gender,
-        cost_per_person,
-        deadline,
-        contact,
-        form_link,
-        desc,
-      } = req.body;
-      const file_url = req.files;
-
-      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-      const verify_access_token = verify_jwt(token);
-
-      const uploaded_file = file_url.map((val) => ({
-        name: Buffer.from(val.originalname, "latin1").toString("utf8"),
-        size: val.size,
-        uri: val.location,
-      }));
-
-      await db.collection("examine_research").insertOne({
-        user_id: verify_access_token.user_id,
-        category,
-        title,
-        recruitment_num: Number(recruitment_num),
-        min_age,
-        max_age,
-        gender,
-        cost_per_person,
-        deadline,
-        contact,
-        form_link,
-        desc,
-        img_arr: uploaded_file,
-        participate_user_arr: [],
-        participate_user_count: 0,
-        rating_user_arr: [],
-        rating_user_count: 0,
-        like_user_arr: [],
-        like_user_count: 0,
-      });
-
-      res.json({
-        status: "ok",
-      });
-    } catch (error) {
-      console.error("error:", error);
-      res.status(500).json({
-        status: "error",
-        message: "Internal server error",
-      });
-    }
-  }
-);
 
 /**
  * 설문 조사 수정

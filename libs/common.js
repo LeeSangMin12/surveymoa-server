@@ -62,6 +62,7 @@ export const verify_jwt = (token) => {
 
 /**
  * s3에 파일을 업로드 해준다.
+ * : formdata로 data를 받을 때 type이 문자로 치환되기 때문에, type변경 해줘야함
  */
 export const s3_file_upload = (path_prefix) =>
   multer({

@@ -24,7 +24,7 @@ router.post("/token", async (req, res) => {
   const user_initial_info =
     await sql`select user_initial_id from users where id = ${user_id}`;
   const users_info =
-    await sql`select refresh_token from user_initial where id = ${user_initial_info[0].id}`;
+    await sql`select refresh_token from user_initial where id = ${user_initial_info[0].user_initial_id}`;
 
   const verify_access_token = verify_jwt(token);
   const verify_refresh_token = verify_jwt(users_info[0].refresh_token);
@@ -59,7 +59,7 @@ router.post("/token", async (req, res) => {
       verify_access_token.platform_id
     );
 
-    await sql`update user_initial set refresh_token=${refresh_token} 
+    await sql`update user_initial set refresh_token=${refresh_token}
     where id = ${user_initial_info[0].id}`;
     res.json({
       status: "ok",
