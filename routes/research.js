@@ -42,14 +42,14 @@ const get_research_arr = async (category, last_research_id) => {
       img_arr,
       participant_research_count
     from research
-    ${
+    WHERE ${
       category === "전체"
         ? last_research_id === ""
-          ? sql`where TRUE`
-          : sql`where id < ${last_research_id}`
+          ? sql`TRUE`
+          : sql`id < ${last_research_id}`
         : last_research_id === ""
-        ? sql`WHERE category = ${category}`
-        : sql`WHERE id < ${last_research_id} and category = ${category}`
+        ? sql`category = ${category}`
+        : sql`id < ${last_research_id} and category = ${category}`
     }
     ORDER BY id desc
     limit 10`;
@@ -141,18 +141,6 @@ router.post("/get_research_arr_by_category", async (req, res) => {
       category,
       last_research_id, //무한스크롤에 필요
     } = req.body.data;
-
-    let research_filter = "";
-
-    if (category === "전체") {
-      research_filter =
-        last_research_id === "" ? `WHERE id < 59` : `WHERE id < 49`;
-    } else {
-      research_filter =
-        last_research_id === ""
-          ? `WHERE category = ${category}`
-          : `WHERE id < ${last_research_id} and category = ${category}`;
-    }
 
     const research_arr = await get_research_arr(category, last_research_id);
 

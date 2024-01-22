@@ -109,25 +109,19 @@ router.post("/get_initial_info", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    const user_info = await db.collection("login").findOne(
-      { _id: ObjectId(verify_access_token.user_id) },
-      {
-        projection: {
-          _id: 1,
-          nickname: 1,
-          gender: 1,
-          year_of_birth: 1,
-          hashtag_arr: 1,
-          self_introduction: 1,
-          user_img: 1,
-        },
-      }
-    );
+    const sql_users = await sql`select 
+      nickname,
+      gender,
+      year_of_birth,
+      self_introduction,
+      user_img
+    from users
+    where id=${verify_access_token.user_id}`;
 
     res.json({
       status: "ok",
       data: {
-        user_info: user_info,
+        user_info: sql_users[0],
       },
     });
   } catch (error) {
@@ -262,21 +256,18 @@ router.post("/get_like_user_arr", async (req, res) => {
  */
 router.post("/get_like_research_arr", async (req, res) => {
   try {
-    // const { user_id } = req.body.data;
-    // const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    // const verify_access_token = verify_jwt(token);
-    // const user = await db.collection("login").findOne(
-    //   {
-    //     _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
-    //   },
-    //   { projection: { like_research_arr: 1 } }
-    // );
-    // res.json({
-    //   status: "ok",
-    //   data: {
-    //     like_research_arr: user.like_research_arr,
-    //   },
-    // });
+    const { user_id } = req.body.data;
+
+    const sql_like_research =
+      await sql`select user_id, research_id from like_research 
+      where user_id = ${user_id}`;
+
+    res.json({
+      status: "ok",
+      data: {
+        like_research_arr: sql_like_research,
+      },
+    });
   } catch (error) {
     console.error("error:", error);
     res.status(500).json({
