@@ -2,6 +2,7 @@ import express from "express";
 import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 
+import sql from "../db.js";
 import { verify_jwt, s3_file_upload } from "../libs/common.js";
 
 dotenv.config(); //env 파일 가져오기
@@ -32,32 +33,11 @@ router.post("/initial_setting", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    await db.collection("login").updateOne(
-      { _id: ObjectId(verify_access_token.user_id) },
-      {
-        $set: {
-          nickname,
-          gender,
-          year_of_birth,
-          hashtag_arr: [],
-          self_introduction: "",
-          user_img: "",
-          participate_research_arr: [],
-          participate_research_count: 0,
-          rating_research_count: 0,
-          rating_research_arr: [],
-          rating_research: 0,
-          like_research_count: 0,
-          like_research_arr: [],
-          like_user_count: 0,
-          like_user_arr: [],
-          liked_user_count: 0,
-          liked_user_arr: [],
-          accumulated_money: 0,
-          accumulated_money_arr: [],
-        },
-      }
-    );
+    await sql`update users set
+      nickname=${nickname},
+      gender=${gender},
+      year_of_birth=${year_of_birth}
+    where id = ${verify_access_token.user_id}`;
 
     res.json({
       status: "ok",
@@ -283,17 +263,14 @@ router.post("/get_like_user_arr", async (req, res) => {
 router.post("/get_like_research_arr", async (req, res) => {
   try {
     const { user_id } = req.body.data;
-
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
-
     const user = await db.collection("login").findOne(
       {
         _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
       },
       { projection: { like_research_arr: 1 } }
     );
-
     res.json({
       status: "ok",
       data: {

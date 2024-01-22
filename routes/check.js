@@ -2,6 +2,7 @@ import express from "express";
 import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 
+import sql from "../db.js";
 import { make_jwt, verify_jwt } from "../libs/common.js";
 
 dotenv.config(); //env 파일 가져오기
@@ -108,11 +109,10 @@ router.post("/token", async (req, res) => {
 router.post("/duplicate_check_nickname", async (req, res) => {
   const { nickname } = req.body.data;
 
-  const is_duplicate_nickanme = await db.collection("login").findOne({
-    nickname: nickname,
-  });
+  const is_duplicate_nickanme = await sql`select COUNT(*) from users 
+  where nickname = ${nickname}`;
 
-  if (is_duplicate_nickanme === null) {
+  if (is_duplicate_nickanme[0].count === "0") {
     //중복 닉네임이 없음
     res.json({
       status: "ok",
