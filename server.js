@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 
 import chat_router, { store_chat } from "./routes/chat.js";
 import check_router from "./routes/check.js";
+import like_research_router from "./routes/like_research.js";
 import login_router from "./routes/login.js";
 import participant_research_router from "./routes/participant_research.js";
 import research_router from "./routes/research.js";
@@ -37,6 +38,7 @@ const io = new Server(server, {
 
 app.use("/chat", chat_router);
 app.use("/check", check_router);
+app.use("/like_research", like_research_router);
 app.use("/login", login_router);
 app.use("/participant_research", participant_research_router);
 app.use("/research", research_router);
