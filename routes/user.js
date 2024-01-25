@@ -118,10 +118,14 @@ router.post("/get_initial_info", async (req, res) => {
       nickname,
       gender,
       year_of_birth,
+      CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr,
       self_introduction,
       user_img
     from users
-    where id=${verify_access_token.user_id}`;
+    left join user_hashtag
+    on users.id = user_hashtag.user_id
+    where users.id=${verify_access_token.user_id}
+    group by users.id`;
 
     res.json({
       status: "ok",
