@@ -113,7 +113,7 @@ router.post(
           ${max_age},
           ${gender},
           ${Number(cost_per_person)},
-          ${Date(deadline)},
+          ${new Date(deadline)},
           ${form_link},
           ${research_explanation},
           ${uploaded_file}
