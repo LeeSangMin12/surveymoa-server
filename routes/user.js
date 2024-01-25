@@ -24,6 +24,39 @@ MongoClient.connect(
 );
 
 /**
+ * 유저 리스트 검색
+ */
+const search_user = async (search_word, last_user_id) => {
+  const user_arr = await sql`
+  select
+    users.id,
+    nickname,
+    gender,
+    year_of_birth,
+    self_introduction,
+    user_img,
+    rating_research,
+    CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr
+  from users 
+  left join user_hashtag 
+  on users.id = user_hashtag.user_id
+  where ${
+    search_word === ""
+      ? last_user_id === ""
+        ? sql`TRUE`
+        : sql`users.id < ${last_user_id}`
+      : last_user_id === ""
+      ? sql`user_hashtag.hashtag = ${search_word}`
+      : sql`users.id < ${last_user_id} and user_hashtag.hashtag = ${search_word}`
+  }
+  group by users.id
+  ORDER BY users.id desc
+  limit 10;
+`;
+  return user_arr;
+};
+
+/**
  * 유저 초기 정보 세팅
  */
 router.post("/initial_setting", async (req, res) => {
@@ -74,6 +107,62 @@ router.post("/duplicate_check_nickname", async (req, res) => {
 });
 
 /**
+ * 유저 초기정보 조회
+ */
+router.post("/get_initial_info", async (req, res) => {
+  try {
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const sql_users = await sql`select 
+      nickname,
+      gender,
+      year_of_birth,
+      self_introduction,
+      user_img
+    from users
+    where id=${verify_access_token.user_id}`;
+
+    res.json({
+      status: "ok",
+      data: {
+        user_info: sql_users[0],
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
+ * 전문가 조사 검색
+ */
+router.post("/search_user_arr", async (req, res) => {
+  try {
+    const { search_word, last_user_id } = req.body.data;
+
+    const search_user_arr = await search_user(search_word, last_user_id);
+
+    res.json({
+      status: "ok",
+      data: {
+        search_user_arr: search_user_arr,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
  * 유저 초기 정보 수정
  */
 router.post(
@@ -116,38 +205,6 @@ router.post(
     }
   }
 );
-
-/**
- * 유저 초기정보 조회
- */
-router.post("/get_initial_info", async (req, res) => {
-  try {
-    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    const verify_access_token = verify_jwt(token);
-
-    const sql_users = await sql`select 
-      nickname,
-      gender,
-      year_of_birth,
-      self_introduction,
-      user_img
-    from users
-    where id=${verify_access_token.user_id}`;
-
-    res.json({
-      status: "ok",
-      data: {
-        user_info: sql_users[0],
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "유저 데이터를 불러오지 못했습니다.",
-    });
-  }
-});
 
 /**
  * 유저 정보를 가져오기
@@ -282,66 +339,6 @@ router.post("/get_like_research_arr", async (req, res) => {
       status: "ok",
       data: {
         like_research_arr: sql_like_research,
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "유저 데이터를 불러오지 못했습니다.",
-    });
-  }
-});
-
-/**
- * 전문가 조사 검색
- */
-router.post("/search_user_arr", async (req, res) => {
-  try {
-    const { search_word, last_user_id } = req.body.data;
-
-    let search_filter;
-    //처음 조회할때
-    if (last_user_id === "") {
-      search_filter =
-        search_word === ""
-          ? { nickname: { $exists: true } }
-          : { nickname: { $exists: true }, hashtag_arr: search_word };
-    } else {
-      search_filter =
-        search_word === ""
-          ? {
-              _id: { $lt: ObjectId(last_user_id) },
-              nickname: { $exists: true },
-            }
-          : {
-              _id: { $lt: ObjectId(last_user_id) },
-              nickname: { $exists: true },
-              hashtag_arr: search_word,
-            };
-    }
-
-    const user_info_arr = await db
-      .collection("login")
-      .find(search_filter, {
-        projection: {
-          _id: 1,
-          nickname: 1,
-          gender: 1,
-          year_of_birth: 1,
-          hashtag_arr: 1,
-          user_img: 1,
-          rating_research: 1,
-        },
-      })
-      .sort({ _id: -1 })
-      .limit(10)
-      .toArray();
-
-    res.json({
-      status: "ok",
-      data: {
-        user_info_arr: user_info_arr,
       },
     });
   } catch (error) {
