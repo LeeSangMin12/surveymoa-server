@@ -52,6 +52,28 @@ router.post("/initial_setting", async (req, res) => {
 });
 
 /**
+ * 중복된 닉네임 존재유무 확인
+ */
+router.post("/duplicate_check_nickname", async (req, res) => {
+  const { nickname } = req.body.data;
+
+  const is_duplicate_nickanme = await sql`select COUNT(*) from users 
+  where nickname = ${nickname}`;
+
+  if (is_duplicate_nickanme[0].count === "0") {
+    //중복 닉네임이 없음
+    res.json({
+      status: "ok",
+    });
+  } else {
+    //중복 닉네임 존재
+    res.json({
+      status: "duplication_nickname_exist",
+    });
+  }
+});
+
+/**
  * 유저 초기 정보 수정
  */
 router.post(
@@ -60,6 +82,9 @@ router.post(
   async (req, res) => {
     try {
       const { user_img, nickname, gender, year_of_birth } = req.body;
+
+      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+      const verify_access_token = verify_jwt(token);
 
       let img_url;
       if (req.file === undefined) {
@@ -72,21 +97,12 @@ router.post(
         img_url = req.file.location;
       }
 
-      const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-      const verify_access_token = verify_jwt(token);
-
-      await db.collection("login").updateOne(
-        { _id: ObjectId(verify_access_token.user_id) },
-        {
-          $set: {
-            user_img: img_url,
-            nickname,
-            gender,
-            year_of_birth,
-            img_url,
-          },
-        }
-      );
+      await sql`update users set 
+        user_img=${img_url},
+        nickname=${nickname},
+        gender=${gender},
+        year_of_birth=${year_of_birth}
+      where id  = ${verify_access_token.user_id}`;
 
       res.json({
         status: "ok",
@@ -472,16 +488,8 @@ router.post("/regi_self_introduction", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    await db.collection("login").updateOne(
-      {
-        _id: ObjectId(verify_access_token.user_id),
-      },
-      {
-        $set: {
-          self_introduction,
-        },
-      }
-    );
+    await sql`update users set self_introduction=${self_introduction}
+    where id = ${verify_access_token.user_id}`;
 
     res.json({
       status: "ok",
