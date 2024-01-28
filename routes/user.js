@@ -85,6 +85,50 @@ router.post("/initial_setting", async (req, res) => {
 });
 
 /**
+ * 유저 초기정보 조회
+ */
+router.post("/get_initial_info", async (req, res) => {
+  try {
+    const { user_id } = req.body.data;
+
+    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
+    const verify_access_token = verify_jwt(token);
+
+    const user_id_filter =
+      user_id === "" ? verify_access_token.user_id : user_id;
+
+    const sql_users = await sql`select 
+      nickname,
+      gender,
+      year_of_birth,
+      CASE WHEN count(user_hashtag.hashtag) > 0 
+        THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag) ) 
+        ELSE ARRAY[]::json[] 
+        END as hashtag_arr,
+      self_introduction,
+      user_img
+    from users
+    left join user_hashtag
+    on users.id = user_hashtag.user_id
+    where users.id=${user_id_filter}
+    group by users.id`;
+
+    res.json({
+      status: "ok",
+      data: {
+        user_info: sql_users[0],
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
+/**
  * 중복된 닉네임 존재유무 확인
  */
 router.post("/duplicate_check_nickname", async (req, res) => {
@@ -102,42 +146,6 @@ router.post("/duplicate_check_nickname", async (req, res) => {
     //중복 닉네임 존재
     res.json({
       status: "duplication_nickname_exist",
-    });
-  }
-});
-
-/**
- * 유저 초기정보 조회
- */
-router.post("/get_initial_info", async (req, res) => {
-  try {
-    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    const verify_access_token = verify_jwt(token);
-
-    const sql_users = await sql`select 
-      nickname,
-      gender,
-      year_of_birth,
-      CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr,
-      self_introduction,
-      user_img
-    from users
-    left join user_hashtag
-    on users.id = user_hashtag.user_id
-    where users.id=${verify_access_token.user_id}
-    group by users.id`;
-
-    res.json({
-      status: "ok",
-      data: {
-        user_info: sql_users[0],
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "유저 데이터를 불러오지 못했습니다.",
     });
   }
 });
@@ -285,64 +293,6 @@ router.post("/get_info_by_user_id", async (req, res) => {
       status: "ok",
       data: {
         user_info: user_info,
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "유저 데이터를 불러오지 못했습니다.",
-    });
-  }
-});
-
-/**
- * 유저 유저 찜 목록 조회
- */
-router.post("/get_like_user_arr", async (req, res) => {
-  try {
-    const { user_id } = req.body.data;
-
-    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    const verify_access_token = verify_jwt(token);
-
-    const user = await db.collection("login").findOne(
-      {
-        _id: ObjectId(user_id === "" ? verify_access_token.user_id : user_id),
-      },
-      { projection: { like_user_arr: 1 } }
-    );
-
-    res.json({
-      status: "ok",
-      data: {
-        like_user_arr: user.like_user_arr,
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "유저 데이터를 불러오지 못했습니다.",
-    });
-  }
-});
-
-/**
- * 유저 조사 찜 목록 조회
- */
-router.post("/get_like_research_arr", async (req, res) => {
-  try {
-    const { user_id } = req.body.data;
-
-    const sql_like_research =
-      await sql`select user_id, research_id from like_research 
-      where user_id = ${user_id}`;
-
-    res.json({
-      status: "ok",
-      data: {
-        like_research_arr: sql_like_research,
       },
     });
   } catch (error) {
