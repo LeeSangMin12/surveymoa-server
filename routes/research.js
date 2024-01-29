@@ -160,48 +160,6 @@ router.post("/get_research_arr_by_category", async (req, res) => {
 /**
  * 설문조사 가져오기
  */
-router.post("/get_research", async (req, res) => {
-  try {
-    const { research_id } = req.body.data;
-
-    const research = await db.collection("research").findOne({
-      _id: ObjectId(research_id),
-    });
-
-    const research_obj = {
-      user_id: research.user_id,
-      category: research.category,
-      title: research.title,
-      recruitment_num: research.recruitment_num,
-      min_age: research.min_age,
-      max_age: research.max_age,
-      gender: research.gender,
-      cost_per_person: research.cost_per_person,
-      deadline: research.deadline,
-      contact: research.contact,
-      form_link: research.form_link,
-      desc: research.desc,
-      img_arr: research.img_arr,
-      participate_user_arr: research.participate_user_arr,
-      participate_user_count: research.participate_user_count,
-    };
-
-    res.json({
-      status: "ok",
-      data: research_obj,
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-/**
- * 설문조사 가져오기
- */
 router.post("/get_research_obj", async (req, res) => {
   try {
     const { research_id } = req.body.data;
@@ -226,6 +184,41 @@ router.post("/get_research_obj", async (req, res) => {
     res.json({
       status: "ok",
       data: { research_obj: sql_research_obj[0] },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 설문조사 리스트 id배열로 가져오기
+ */
+router.post("/get_research_arr_by_research_id_arr", async (req, res) => {
+  try {
+    const { research_id_arr } = req.body.data;
+
+    const sql_research_arr = await sql`select 
+      id,
+      category,
+      title,
+      recruitment_num,
+      min_age,
+      max_age,
+      gender,
+      cost_per_person,
+      deadline,
+      img_arr,
+      participant_research_count
+    from research
+    where id in ${sql(research_id_arr)}`;
+
+    res.json({
+      status: "ok",
+      data: { research_arr: sql_research_arr },
     });
   } catch (error) {
     console.error("error:", error);
@@ -611,6 +604,48 @@ router.post("/edit_rating", async (req, res) => {
 
     res.json({
       status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 설문조사 가져오기
+ */
+router.post("/get_research", async (req, res) => {
+  try {
+    const { research_id } = req.body.data;
+
+    const research = await db.collection("research").findOne({
+      _id: ObjectId(research_id),
+    });
+
+    const research_obj = {
+      user_id: research.user_id,
+      category: research.category,
+      title: research.title,
+      recruitment_num: research.recruitment_num,
+      min_age: research.min_age,
+      max_age: research.max_age,
+      gender: research.gender,
+      cost_per_person: research.cost_per_person,
+      deadline: research.deadline,
+      contact: research.contact,
+      form_link: research.form_link,
+      desc: research.desc,
+      img_arr: research.img_arr,
+      participate_user_arr: research.participate_user_arr,
+      participate_user_count: research.participate_user_count,
+    };
+
+    res.json({
+      status: "ok",
+      data: research_obj,
     });
   } catch (error) {
     console.error("error:", error);
