@@ -174,6 +174,53 @@ router.post("/search_user_arr", async (req, res) => {
   }
 });
 
+/**https://www.k-startup.go.kr/#main-section_2
+ * 조사에 해당하는 유저 리스트 조회
+ */
+router.post("/get_user_arr_by_research_id", async (req, res) => {
+  try {
+    const { research_id } = req.body.data;
+
+    const sql_user_arr = await sql`select 
+      users.id,
+      nickname,
+      gender,
+      year_of_birth,
+      self_introduction,
+      user_img,
+      rating_research,
+      CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr
+    from users 
+    where ${
+      search_word === ""
+        ? last_user_id === ""
+          ? sql`TRUE`
+          : sql`users.id < ${last_user_id}`
+        : last_user_id === ""
+        ? sql`user_hashtag.hashtag = ${search_word}`
+        : sql`users.id < ${last_user_id} and user_hashtag.hashtag = ${search_word}`
+    }
+    group by users.id
+    ORDER BY users.id desc
+    `;
+
+    const search_user_arr = await search_user(search_word, last_user_id);
+
+    res.json({
+      status: "ok",
+      data: {
+        user_arr: user_arr,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "유저 데이터를 불러오지 못했습니다.",
+    });
+  }
+});
+
 /**
  * 유저 초기 정보 수정
  */
