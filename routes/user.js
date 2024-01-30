@@ -128,7 +128,9 @@ router.post("/get_initial_info", async (req, res) => {
         ELSE ARRAY[]::json[] 
         END as hashtag_arr,
       self_introduction,
-      user_img
+      user_img,
+      liked_user_count,
+      rating_research
     from users
     left join user_hashtag
     on users.id = user_hashtag.user_id

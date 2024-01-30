@@ -231,6 +231,42 @@ router.post("/get_research_arr_by_research_id_arr", async (req, res) => {
 });
 
 /**
+ * 유저가 만든 조사 리스트 가져오기
+ */
+router.post("/get_make_research_arr", async (req, res) => {
+  try {
+    const { user_id } = req.body.data;
+
+    const sql_research_arr = await sql`select 
+      id,
+      category,
+      title,
+      recruitment_num,
+      min_age,
+      max_age,
+      gender,
+      cost_per_person,
+      deadline,
+      img_arr,
+      participant_research_count
+    from research
+    where user_id = ${user_id}
+    ORDER BY id desc`;
+
+    res.json({
+      status: "ok",
+      data: { make_research_arr: sql_research_arr },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
  * 설문 조사 수정
  */
 router.post(
