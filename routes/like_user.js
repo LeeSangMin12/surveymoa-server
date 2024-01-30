@@ -21,10 +21,6 @@ router.post("/like", async (req, res) => {
       (${verify_access_token.user_id},${user_id})`;
 
     await sql`update users
-      set like_user_count = like_user_count + 1
-      where id = ${verify_access_token.user_id}`;
-
-    await sql`update users
       set liked_user_count = liked_user_count + 1
       where id = ${user_id}`;
 
@@ -85,10 +81,6 @@ router.post("/unlike", async (req, res) => {
 
     await sql`delete from like_user 
     where user_id=${verify_access_token.user_id} and liked_user_id=${user_id}`;
-
-    await sql`update users
-    set like_user_count = like_user_count - 1
-    where id = ${verify_access_token.user_id}`;
 
     await sql`update users
     set liked_user_count = liked_user_count - 1

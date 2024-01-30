@@ -20,14 +20,6 @@ router.post("/like", async (req, res) => {
     values
       (${verify_access_token.user_id},${research_id})`;
 
-    await sql`update users
-    set like_research_count = like_research_count + 1
-    where id = ${verify_access_token.user_id}`;
-
-    await sql`update research
-    set like_research_count = like_research_count + 1
-    where id = ${research_id}`;
-
     res.json({
       status: "ok",
     });
@@ -79,14 +71,6 @@ router.post("/unlike", async (req, res) => {
 
     await sql`delete from like_research 
     where user_id=${verify_access_token.user_id} and research_id=${research_id}`;
-
-    await sql`update users 
-    set like_research_count = like_research_count - 1
-    where id = ${verify_access_token.user_id}`;
-
-    await sql`update research 
-    set like_research_count = like_research_count - 1
-    where id = ${research_id}`;
 
     res.json({
       status: "ok",
