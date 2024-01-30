@@ -214,7 +214,8 @@ router.post("/get_research_arr_by_research_id_arr", async (req, res) => {
       img_arr,
       participant_research_count
     from research
-    where id in ${sql(research_id_arr)}`;
+    where id in ${sql(research_id_arr)}
+    ORDER BY id desc`;
 
     res.json({
       status: "ok",
