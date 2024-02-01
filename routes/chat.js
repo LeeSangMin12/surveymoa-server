@@ -3,13 +3,13 @@ import { default as mongodb } from "mongodb";
 import dotenv from "dotenv";
 
 import { verify_jwt } from "../libs/common.js";
+import sql from "../db.js";
 
 dotenv.config(); //env 파일 가져오기
 const { DB_URL } = process.env;
 
 const router = express.Router();
 const MongoClient = mongodb.MongoClient;
-const ObjectId = mongodb.ObjectId;
 let db;
 
 MongoClient.connect(
@@ -27,7 +27,7 @@ MongoClient.connect(
  */
 export const store_chat = async (message) => {
   await db.collection("chat").insertOne({
-    room_id: ObjectId(message.room_id),
+    room_id: message.room_id,
     msg: message.msg,
     user_id: message.user_id,
     date: message.date,
@@ -39,127 +39,39 @@ export const store_chat = async (message) => {
  */
 router.post("/participant_chatroom", async (req, res) => {
   try {
-    const { particiapnt_user_id } = req.body.data;
+    const { participant_user_id, created } = req.body.data;
 
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    const is_exist_chatroom = await db.collection("chatroom").findOne({
-      particiapnt_user_id: particiapnt_user_id,
-    });
+    const is_exist_chatroom_sql = await sql`select
+      id from chat_room
+      where participant_user_id = ${participant_user_id} and 
+        user_id=${verify_access_token.user_id}`;
 
-    if (is_exist_chatroom) {
+    if (is_exist_chatroom_sql.length === 0) {
+      const new_chatroom = await sql`insert into chat_room
+        (user_id, participant_user_id, created)
+      values
+        (${verify_access_token.user_id},
+        ${participant_user_id},
+        ${new Date(created)})
+      returning id`;
+
       res.json({
         status: "ok",
         data: {
-          chatroom_id: is_exist_chatroom._id,
+          chatroom_id: new_chatroom[0].id,
         },
       });
     } else {
-      const chatroom = await db.collection("chatroom").insertOne({
-        user_id: verify_access_token.user_id,
-        particiapnt_user_id: particiapnt_user_id,
-        date: new Date(),
-      });
       res.json({
         status: "ok",
         data: {
-          chatroom_id: chatroom.ops[0]._id,
+          chatroom_id: is_exist_chatroom_sql[0].id,
         },
       });
     }
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-/**
- * 채팅룸 리스트 조회
- */
-router.post("/get_chat_arr", async (req, res) => {
-  try {
-    const { chatroom_id } = req.body.data;
-
-    const chat_arr = await db
-      .collection("chat")
-      .find({
-        room_id: ObjectId(chatroom_id),
-      })
-      .toArray();
-
-    res.json({
-      status: "ok",
-      data: {
-        chat_arr,
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-});
-
-/**
- * 채팅룸 정보 조회
- */
-router.post("/get_chatroom_user", async (req, res) => {
-  try {
-    const { chatroom_id } = req.body.data;
-    let participant_user_id = "";
-
-    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    const verify_access_token = verify_jwt(token);
-
-    const chatroom_info = await db.collection("chatroom").findOne(
-      { _id: ObjectId(chatroom_id) },
-      {
-        projection: {
-          user_id: 1,
-          particiapnt_user_id: 1,
-        },
-      }
-    );
-
-    if (
-      verify_access_token.user_id !== chatroom_info.user_id &&
-      verify_access_token.user_id !== chatroom_info.particiapnt_user_id
-    ) {
-      return res.json({
-        status: "false",
-      });
-    }
-
-    //내가 만든 채팅방일때
-    if (chatroom_info.user_id === verify_access_token.user_id) {
-      participant_user_id = chatroom_info.particiapnt_user_id;
-    } else {
-      //만듬당한 채팅방일때
-      participant_user_id = chatroom_info.user_id;
-    }
-
-    const chatroom_user_obj = await db.collection("login").findOne(
-      { _id: ObjectId(participant_user_id) },
-      {
-        projection: {
-          _id: 0,
-          user_id: "$_id",
-          nickname: 1,
-          user_img: 1,
-        },
-      }
-    );
-
-    res.json({
-      status: "ok",
-      data: { chatroom_user_obj },
-    });
   } catch (error) {
     console.error("error:", error);
     res.status(500).json({
@@ -177,21 +89,58 @@ router.post("/get_chatroom_arr", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    const chatroom_arr = await db
-      .collection("chatroom")
+    const chatroom_arr_sql = await sql`
+    select
+      chat_room.id,
+      chat_room.user_id,
+      chat_room.participant_user_id,
+      users.nickname,
+      users.user_img
+    from chat_room
+    left join users on case 
+    when chat_room.user_id = ${verify_access_token.user_id} 
+      then chat_room.participant_user_id = users.id
+    when chat_room.participant_user_id = ${verify_access_token.user_id} 
+      then chat_room.user_id = users.id
+    end
+    where users.nickname is not null
+    group by chat_room.id, users.nickname, users.user_img
+    order by chat_room.id desc
+  `;
+
+    res.json({
+      status: "ok",
+      data: {
+        chatroom_arr: chatroom_arr_sql,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 채팅 리스트 조회
+ */
+router.post("/get_chat_arr", async (req, res) => {
+  try {
+    const { chatroom_id } = req.body.data;
+
+    const chat_arr = await db
+      .collection("chat")
       .find({
-        $or: [
-          { user_id: verify_access_token.user_id },
-          { particiapnt_user_id: verify_access_token.user_id },
-        ],
+        room_id: chatroom_id,
       })
-      .sort({ _id: -1 })
       .toArray();
 
     res.json({
       status: "ok",
       data: {
-        chatroom_arr,
+        chat_arr,
       },
     });
   } catch (error) {
