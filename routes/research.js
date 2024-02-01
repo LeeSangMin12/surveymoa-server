@@ -165,6 +165,7 @@ router.post("/get_research_obj", async (req, res) => {
     const { research_id } = req.body.data;
 
     const sql_research_obj = await sql`select 
+      id,
       user_id,
       category,
       title,
