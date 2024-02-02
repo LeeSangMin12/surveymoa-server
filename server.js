@@ -5,6 +5,7 @@ import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
+import accumulated_money_router from "./routes/accumulated_money.js";
 import chat_router, { store_chat } from "./routes/chat.js";
 import check_router from "./routes/check.js";
 import like_research_router from "./routes/like_research.js";
@@ -39,6 +40,7 @@ const io = new Server(server, {
   },
 });
 
+app.use("/accumulated_money", accumulated_money_router);
 app.use("/chat", chat_router);
 app.use("/check", check_router);
 app.use("/like_research", like_research_router);

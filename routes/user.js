@@ -130,7 +130,8 @@ router.post("/get_initial_info", async (req, res) => {
       self_introduction,
       user_img,
       liked_user_count,
-      rating_research
+      rating_research,
+      accumulated_money
     from users
     left join user_hashtag
     on users.id = user_hashtag.user_id

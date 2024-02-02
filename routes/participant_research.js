@@ -24,10 +24,6 @@ router.post("/participate", async (req, res) => {
         ${new Date(submission_date)}
         )`;
 
-    await sql`update users
-    set participant_research_count = participant_research_count + 1
-    where id = ${verify_access_token.user_id}`;
-
     await sql`update research
     set participant_research_count = participant_research_count + 1
     where id = ${research_id}`;
