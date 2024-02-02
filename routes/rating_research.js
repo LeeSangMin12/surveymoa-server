@@ -1,7 +1,6 @@
 import express from "express";
 
 import sql from "../db.js";
-import { verify_jwt } from "../libs/common.js";
 
 const router = express.Router();
 

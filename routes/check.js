@@ -82,26 +82,4 @@ router.post("/token", async (req, res) => {
   }
 });
 
-/**
- * 중복된 닉네임 존재유무 확인
- */
-router.post("/duplicate_check_nickname", async (req, res) => {
-  const { nickname } = req.body.data;
-
-  const is_duplicate_nickanme = await sql`select COUNT(*) from users 
-  where nickname = ${nickname}`;
-
-  if (is_duplicate_nickanme[0].count === "0") {
-    //중복 닉네임이 없음
-    res.json({
-      status: "ok",
-    });
-  } else {
-    //중복 닉네임 존재
-    res.json({
-      status: "duplication_nickname_exist",
-    });
-  }
-});
-
 export default router;

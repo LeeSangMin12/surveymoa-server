@@ -34,37 +34,4 @@ router.post("/regi_hashtag_arr", async (req, res) => {
   }
 });
 
-/**
- * hashtag 조회
- */
-router.post("/get_hashtag_arr", async (req, res) => {
-  try {
-    const { user_id } = req.body.data;
-
-    const token = req.header("Authorization").replace(/^Bearer\s+/, "");
-    const verify_access_token = verify_jwt(token);
-
-    const user_id_filter =
-      user_id === "" ? verify_access_token.user_id : user_id;
-
-    const sql_hashtag_arr = await sql`select 
-      id, hashtag
-    from user_hashtag
-    where user_id = ${user_id_filter}`;
-
-    res.json({
-      status: "ok",
-      data: {
-        hashtag_arr: sql_hashtag_arr,
-      },
-    });
-  } catch (error) {
-    console.error("error:", error);
-    res.status(500).json({
-      status: "error",
-      message: "유저 데이터를 불러오지 못했습니다.",
-    });
-  }
-});
-
 export default router;
