@@ -31,7 +31,7 @@ const search_user = async (search_word, last_user_id) => {
       ? sql`user_hashtag.hashtag = ${search_word}`
       : sql`users.id < ${last_user_id} and user_hashtag.hashtag = ${search_word}`
   }
-  group by users.id
+  group by users.id,
   ORDER BY users.id desc
   limit 10;
 `;
@@ -113,12 +113,15 @@ router.post("/get_initial_info", async (req, res) => {
       user_img,
       liked_user_count,
       rating_research,
-      accumulated_money
+      accumulated_money,
+      firebase.notification_token
     from users
     left join user_hashtag
-    on users.id = user_hashtag.user_id
+      on users.id = user_hashtag.user_id
+    left join firebase
+      on users.id = firebase.user_id
     where users.id=${user_id_filter}
-    group by users.id`;
+    group by users.id, firebase.notification_token`;
 
     res.json({
       status: "ok",
@@ -272,9 +275,13 @@ router.post("/withdrawl_account", async (req, res) => {
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
-    await db
-      .collection("login")
-      .deleteOne({ _id: ObjectId(verify_access_token.user_id) });
+    const user_sql = await sql`update users set
+      nickname = ${"탈퇴회원"}
+    where id = ${verify_access_token.user_id}
+    returning user_initial_id`;
+
+    await sql`delete from user_initial
+    where id = ${user_sql[0].user_initial_id}`;
 
     res.json({
       status: "ok",

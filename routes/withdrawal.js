@@ -6,6 +6,37 @@ import { verify_jwt } from "../libs/common.js";
 const router = express.Router();
 
 /**
+ * 출금 신청 내역 조회
+ */
+router.post("/get_withdrawal_arr", async (req, res) => {
+  try {
+    const withdrawal_arr_sql = await sql`select
+      id, 
+      user_id,
+      withdraw_money,
+      bank_name,
+      account_number,
+      submission_date,
+      approval
+    from withdrawal
+    `;
+
+    res.json({
+      status: "ok",
+      data: {
+        withdrawal_arr: withdrawal_arr_sql,
+      },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
  * 출금 신청 여부 가져오기
  */
 router.post("/is_application_withdrawal", async (req, res) => {
