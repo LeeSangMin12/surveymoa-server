@@ -95,16 +95,19 @@ router.post("/get_chatroom_arr", async (req, res) => {
       chat_room.user_id,
       chat_room.participant_user_id,
       users.nickname,
-      users.user_img
+      users.user_img,
+      firebase.notification_token
     from chat_room
     left join users on case 
-    when chat_room.user_id = ${verify_access_token.user_id} 
-      then chat_room.participant_user_id = users.id
-    when chat_room.participant_user_id = ${verify_access_token.user_id} 
-      then chat_room.user_id = users.id
-    end
+      when chat_room.user_id = ${verify_access_token.user_id} 
+        then chat_room.participant_user_id = users.id
+      when chat_room.participant_user_id = ${verify_access_token.user_id} 
+        then chat_room.user_id = users.id
+      end
+    left join firebase
+      on chat_room.user_id = firebase.user_id
     where users.nickname is not null
-    group by chat_room.id, users.nickname, users.user_img
+    group by chat_room.id, users.nickname, users.user_img, firebase.notification_token
     order by chat_room.id desc
   `;
 
