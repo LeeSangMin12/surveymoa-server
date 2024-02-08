@@ -97,7 +97,10 @@ router.post("/get_participant_user_arr", async (req, res) => {
       users.self_introduction,
       users.user_img,
       users.rating_research,
-      CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr
+      CASE WHEN count(user_hashtag.hashtag) > 0 
+        THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag) ) 
+        ELSE ARRAY[]::json[] 
+        END as hashtag_arr
     from participant_research
     left join users
       on participant_research.user_id = users.id 

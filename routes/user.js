@@ -18,7 +18,10 @@ const search_user = async (search_word, last_user_id) => {
     self_introduction,
     user_img,
     rating_research,
-    CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr
+    CASE WHEN count(user_hashtag.hashtag) > 0 
+        THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag) ) 
+        ELSE ARRAY[]::json[] 
+        END as hashtag_arr
   from users 
   left join user_hashtag 
   on users.id = user_hashtag.user_id
@@ -153,7 +156,10 @@ router.post("/get_user_arr_by_user_id_arr", async (req, res) => {
       self_introduction,
       user_img,
       rating_research,
-      CASE WHEN count(user_hashtag.hashtag) > 0 THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag)) END as hashtag_arr
+      CASE WHEN count(user_hashtag.hashtag) > 0 
+        THEN array_agg(json_build_object('id', user_hashtag.id, 'hashtag', user_hashtag.hashtag) ) 
+        ELSE ARRAY[]::json[] 
+        END as hashtag_arr
     from users
     left join user_hashtag 
     on users.id = user_hashtag.user_id
