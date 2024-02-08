@@ -31,7 +31,7 @@ const search_user = async (search_word, last_user_id) => {
       ? sql`user_hashtag.hashtag = ${search_word}`
       : sql`users.id < ${last_user_id} and user_hashtag.hashtag = ${search_word}`
   }
-  group by users.id,
+  group by users.id
   ORDER BY users.id desc
   limit 10;
 `;
