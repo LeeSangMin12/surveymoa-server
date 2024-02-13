@@ -9,7 +9,7 @@ dotenv.config(); //env 파일 가져오기
 const router = express.Router();
 
 /**
- * 설문조사 리스트 조회
+ * 승인 조사 리스트 조회
  * @param {*} last_research_id
  * @returns research_arr
  */
@@ -26,7 +26,7 @@ const get_research_arr = async (category, last_research_id) => {
       deadline,
       img_arr,
       participant_research_count
-    from research
+    from approval_research
     WHERE ${
       category === "전체"
         ? last_research_id === ""
@@ -43,7 +43,7 @@ const get_research_arr = async (category, last_research_id) => {
 };
 
 /**
- * 설문조사 등록
+ * 조사 등록
  */
 router.post(
   "/regi_research",
@@ -60,6 +60,7 @@ router.post(
         cost_per_person,
         deadline,
         form_link,
+        contact,
         research_explanation,
       } = req.body;
       const file_url = req.files;
@@ -73,7 +74,7 @@ router.post(
         uri: val.location,
       }));
 
-      await sql`insert into examine_research
+      await sql`insert into research
         (
         user_id,
         category,
@@ -85,6 +86,7 @@ router.post(
         cost_per_person,
         deadline,
         form_link,
+        contact,
         research_explanation,
         img_arr
         )
@@ -100,6 +102,7 @@ router.post(
           ${Number(cost_per_person)},
           ${new Date(deadline)},
           ${form_link},
+          ${contact},
           ${research_explanation},
           ${uploaded_file}
         )`;
@@ -118,7 +121,7 @@ router.post(
 );
 
 /**
- * 설문조사 리스트 카테고리별로 가져오기
+ * 승인 조사 리스트 카테고리별로 가져오기
  */
 router.post("/get_research_arr_by_category", async (req, res) => {
   try {
@@ -143,7 +146,7 @@ router.post("/get_research_arr_by_category", async (req, res) => {
 });
 
 /**
- * 설문조사 가져오기
+ * 승인 조사 가져오기
  */
 router.post("/get_research_obj", async (req, res) => {
   try {
@@ -164,7 +167,7 @@ router.post("/get_research_obj", async (req, res) => {
       research_explanation,
       img_arr,
       participant_research_count
-    from research
+    from approval_research
     where id = ${research_id}`;
 
     res.json({
@@ -181,7 +184,7 @@ router.post("/get_research_obj", async (req, res) => {
 });
 
 /**
- * 유저가 만든 조사 리스트 가져오기
+ * 유저가 만든 승인 조사 리스트 가져오기
  */
 router.post("/get_make_research_arr", async (req, res) => {
   try {
@@ -199,7 +202,7 @@ router.post("/get_make_research_arr", async (req, res) => {
       deadline,
       img_arr,
       participant_research_count
-    from research
+    from approval_research
     where user_id = ${user_id}
     ORDER BY id desc`;
 
@@ -217,7 +220,7 @@ router.post("/get_make_research_arr", async (req, res) => {
 });
 
 /**
- * 설문조사 리스트 id배열로 가져오기
+ * 승인 조사 리스트 id배열로 가져오기
  */
 router.post("/get_research_arr_by_research_id_arr", async (req, res) => {
   try {
@@ -235,13 +238,90 @@ router.post("/get_research_arr_by_research_id_arr", async (req, res) => {
       deadline,
       img_arr,
       participant_research_count
-    from research
+    from approval_research
     where id in ${sql(research_id_arr)}
     ORDER BY id desc`;
 
     res.json({
       status: "ok",
       data: { research_arr: sql_research_arr },
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 조사 리스트 조회
+ */
+router.post("/get_research_arr", async (req, res) => {
+  const research_arr_sql = await sql`select 
+    id,
+    category,
+    title,
+    recruitment_num,
+    min_age,
+    max_age,
+    gender,
+    cost_per_person,
+    deadline,
+    img_arr,
+    participant_research_count,
+    approval,
+    approve_date,
+    contact
+  from research`;
+
+  res.json({
+    status: "ok",
+    data: {
+      research_arr: research_arr_sql,
+    },
+  });
+});
+
+/**
+ * 조사 승인
+ */
+router.post("/approve", async (req, res) => {
+  try {
+    const { research_id, approve_date } = req.body.data;
+
+    await sql`update research 
+    set approval = ${true},
+        approve_date = ${new Date(approve_date)}
+    where id = ${research_id}`;
+
+    res.json({
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
+});
+
+/**
+ * 조사 승인 취소
+ */
+router.post("/unapprove", async (req, res) => {
+  try {
+    const { research_id, approve_date } = req.body.data;
+
+    await sql`update research 
+    set approval = ${false},
+        approve_date = ${new Date(approve_date)}
+    where id = ${research_id}`;
+
+    res.json({
+      status: "ok",
     });
   } catch (error) {
     console.error("error:", error);

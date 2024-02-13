@@ -52,13 +52,13 @@ router.post("/get_participant_research_arr", async (req, res) => {
       participant_research.research_id,
       participant_research.submission_date, 
       users.user_img,
-      research.title,
-      research.cost_per_person
+      approval_research.title,
+      approval_research.cost_per_person
     from participant_research
     left join users
       on participant_research.user_id = users.id
-    left join research
-      on participant_research.research_id = research.id  
+    left join approval_research
+      on participant_research.research_id = approval_research.id  
     where 
        ${
          user_id === ""
