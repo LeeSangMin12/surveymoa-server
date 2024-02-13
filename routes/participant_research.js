@@ -16,7 +16,7 @@ router.post("/participate", async (req, res) => {
     const verify_access_token = verify_jwt(token);
 
     await sql`insert into participant_research 
-        (user_id, research_id, submission_date)
+        (user_id, research_id,  submission_date)
       values
         (
         ${verify_access_token.user_id}, 
@@ -49,11 +49,16 @@ router.post("/get_participant_research_arr", async (req, res) => {
 
     const sql_participant_research = await sql`select 
       participant_research.user_id, 
-      participant_research.research_id, 
-      users.user_img
+      participant_research.research_id,
+      participant_research.submission_date, 
+      users.user_img,
+      research.title,
+      research.cost_per_person
     from participant_research
     left join users
-    on participant_research.user_id = users.id 
+      on participant_research.user_id = users.id
+    left join research
+      on participant_research.research_id = research.id  
     where 
        ${
          user_id === ""

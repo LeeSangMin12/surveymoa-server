@@ -10,7 +10,6 @@ import { getMessaging } from "firebase-admin/messaging";
 
 import service_account from "./libs/service_account_key.json" assert { type: "json" };
 
-import accumulated_money_router from "./routes/accumulated_money.js";
 import chat_router, { store_chat } from "./routes/chat.js";
 import check_router from "./routes/check.js";
 import firebase_router from "./routes/firebase.js";
@@ -53,7 +52,6 @@ const io = new Server(server, {
   },
 });
 
-app.use("/accumulated_money", accumulated_money_router);
 app.use("/chat", chat_router);
 app.use("/check", check_router);
 app.use("/firebase", firebase_router);

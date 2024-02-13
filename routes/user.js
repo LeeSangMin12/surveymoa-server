@@ -121,7 +121,6 @@ router.post("/get_initial_info", async (req, res) => {
       user_img,
       liked_user_count,
       rating_research,
-      accumulated_money,
       firebase.notification_token
     from users
     left join user_hashtag
