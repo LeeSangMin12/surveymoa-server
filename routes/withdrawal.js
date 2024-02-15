@@ -10,19 +10,25 @@ const router = express.Router();
  */
 router.post("/application_withdrawal", async (req, res) => {
   try {
-    const { withdraw_money, bank_name, account_number, submission_date } =
-      req.body.data;
+    const {
+      withdraw_money,
+      bank_name,
+      account_number,
+      contact,
+      submission_date,
+    } = req.body.data;
 
     const token = req.header("Authorization").replace(/^Bearer\s+/, "");
     const verify_access_token = verify_jwt(token);
 
     await sql`insert into withdrawal
-      (user_id, withdraw_money, bank_name, account_number, submission_date)
+      (user_id, withdraw_money, bank_name, account_number, contact, submission_date)
     values
       (${verify_access_token.user_id},
       ${withdraw_money},
       ${bank_name},
       ${account_number},
+      ${contact},
       ${new Date(submission_date)})`;
 
     res.json({
@@ -50,6 +56,7 @@ router.post("/get_withdrawal_arr", async (req, res) => {
       withdraw_money,
       bank_name,
       account_number,
+      contact,
       submission_date,
       approval,
       approve_date
