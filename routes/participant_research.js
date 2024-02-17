@@ -52,6 +52,7 @@ router.post("/get_participant_research_arr", async (req, res) => {
       participant_research.research_id,
       participant_research.submission_date, 
       users.user_img,
+      approval_research.category,
       approval_research.title,
       approval_research.cost_per_person
     from participant_research
