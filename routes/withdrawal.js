@@ -51,7 +51,7 @@ router.post("/get_withdrawal_arr", async (req, res) => {
     const { user_id } = req.body.data;
 
     const withdrawal_arr_sql = await sql`select
-      id, 
+      withdrawal.id, 
       user_id,
       withdraw_money,
       bank_name,
@@ -59,8 +59,11 @@ router.post("/get_withdrawal_arr", async (req, res) => {
       contact,
       submission_date,
       approval,
-      approve_date
+      approve_date,
+      users.nickname
     from withdrawal
+    left join users
+      on withdrawal.user_id = users.id
     where  ${user_id === "" ? sql`TRUE` : sql`user_id = ${user_id}`}`;
 
     res.json({
