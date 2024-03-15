@@ -153,22 +153,26 @@ router.post("/get_research_obj", async (req, res) => {
     const { research_id } = req.body.data;
 
     const sql_research_obj = await sql`select 
-      id,
-      user_id,
-      category,
-      title,
-      recruitment_num,
-      min_age,
-      max_age,
-      gender,
-      cost_per_person,
-      deadline,
-      form_link,
-      research_explanation,
-      img_arr,
-      participant_research_count
+      approval_research.id,
+      approval_research.user_id,
+      approval_research.category,
+      approval_research.title,
+      approval_research.recruitment_num,
+      approval_research.min_age,
+      approval_research.max_age,
+      approval_research.gender,
+      approval_research.cost_per_person,
+      approval_research.deadline,
+      approval_research.form_link,
+      approval_research.research_explanation,
+      approval_research.img_arr,
+      approval_research.participant_research_count,
+      pre_verification_research.category as pre_verification_research_category,
+      pre_verification_research.questions as pre_verification_research_questions
     from approval_research
-    where id = ${research_id}`;
+    LEFT JOIN pre_verification_research
+      on approval_research.id = pre_verification_research.research_id
+    where approval_research.id = ${research_id}`;
 
     res.json({
       status: "ok",
